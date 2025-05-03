@@ -1,6 +1,7 @@
 import os
 import discord
 import time
+import random
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from python_aternos import Client
