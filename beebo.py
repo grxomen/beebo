@@ -1,5 +1,6 @@
 import os
 import discord
+import time
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from python_aternos import Client
@@ -19,12 +20,23 @@ ANNOUNCEMENT_CHANNEL_ID = 1359974211367469147
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.presences = True
+intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 last_status = "offline"
+boot_time = time.time()
 
 @bot.event
 async def on_ready():
     print(f'{bot.user} reporting for duty!')
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel:
+        embed = discord.Embed(
+            title="✅ Beebo has reloaded!",
+            description="We're Back <:pixelGUY:1368269152334123049>",
+            color=0xb0c0ff
+        )
+        await channel.send(embed=embed)
     check_server_status.start()
 
 @tasks.loop(hours=3)
@@ -79,6 +91,43 @@ async def mcstatus(ctx):
         embed.set_footer(text="Reminder: Aternos servers need manual starting.")
         await ctx.send(embed=embed)
 
+
+@bot.command(name="𝑩𝒆𝒆𝒃𝒐", aliases=["beebo", "ping"])
+async def beebo_ping(ctx):
+    start = time.perf_counter()
+    msg = await ctx.send("🏓 Pinging Beebo...")
+    end = time.perf_counter()
+    latency_ms = (end - start) * 1000
+    embed = discord.Embed(description="<:pixel_cake_blk:1368286757094949056> Did someone call for Beebo?", color=0xffefb0)
+    embed.set_footer(text=f"Latency: {latency_ms:.2f} ms ({latency_ms/1000:.2f} sec)")
+    await msg.edit(content=None, embed=embed)
+
+@bot.command()
+async def uptime(ctx):
+    uptime_seconds = int(time.time() - boot_time)
+    minutes, seconds = divmod(uptime_seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    embed = discord.Embed(
+        title="🕒 Beebo Uptime",
+        description=f"I've been alive for {hours}h {minutes}m {seconds}s",
+        color=0xb0c0ff
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def version(ctx):
+    import subprocess
+    try:
+        commit = subprocess.check_output(["git", "log", "-1", "--pretty=format:%h - %s"]).decode().strip()
+        embed = discord.Embed(
+            title="📦 Beebo Version",
+            description=f"`{commit}`",
+            color=0xb0c0ff
+        )
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"❌ Could not retrieve version: {e}")       
+
 @bot.command()
 async def startserver(ctx):
     if 1366796508288127066 not in [role.id for role in ctx.author.roles]:
@@ -124,6 +173,35 @@ async def pingoffline_error(ctx, error):
         minutes, seconds = divmod(retry_after, 60)
         time_left = f"{minutes}m {seconds}s" if minutes else f"{seconds}s"
         await ctx.send(f"\u23F3 That command is on cooldown. Try again in `{time_left}`.")
+
+@bot.command()
+async def cakecheck(ctx):
+    cake_id = 546650815297880066
+    cake_user = ctx.guild.get_member(cake_id)
+
+    if not cake_user:
+        description = "Can't find Cake...probably lost in notifications again."
+    else:
+        status = str(cake_user.status)
+        if status == "online":
+            description = "🟢 Cake is online...maybe watching, maybe ignoring."
+        elif status == "idle":
+            description = "🌙 Cake is idle. She's drifting through frosting fog."
+        elif status == "dnd":
+            description = "⛔ Do not disturb: probably battling her DM pile."
+        else:
+            description = "⚫ Cake is offline...or is she?"
+
+    unread_messages = f"{random.randint(3000, 9000):,}"
+    embed = discord.Embed(
+        title="<:pixel_cake:1368264542064345108> Cake Status Scan",
+        description=description,
+        color=0xffaad4
+    )
+    embed.set_thumbnail(url="attachment://pixel_cake.png")
+    embed.set_footer(text="Unread messages: 8,042. DMs: yes, but no.")
+    file = discord.File("/root/beebo/assets/pixel_cake.png", filename="pixel_cake.png")
+    await ctx.send(file=file, embed=embed)
 
 @bot.command()
 async def say(ctx, *, message: str):
