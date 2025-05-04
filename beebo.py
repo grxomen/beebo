@@ -276,7 +276,7 @@ async def goobycheck(ctx):
         "offline": "⚫ Gooby is offline. Mic cooldown active.",
         "not_found": "Gooby couldn’t be found. Sabotage?",
         "default": "Gooby is venting through the shadows."
-
+    })
     embed = discord.Embed(title="🔊 Gooby Voice Check", description=desc, color=0xf8a5c2)
     await ctx.send(embed=embed)
 
