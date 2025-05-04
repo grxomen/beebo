@@ -2,6 +2,7 @@ import os
 import discord
 import time
 import random
+from discord.ui import Button, View
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from python_aternos import Client
@@ -92,6 +93,52 @@ async def mcstatus(ctx):
         embed.set_footer(text="Reminder: Aternos servers need manual starting.")
         await ctx.send(embed=embed)
 
+@bot.command(aliases=["set", "setty"])
+async def setserver(ctx, new_address: str):
+    author_id = ctx.author.id
+    if author_id not in [546650815297880066, 448896936481652777]:
+        await ctx.send("🚫 You don't have permission to update the server address.")
+        return
+
+    if author_id == 448896936481652777:
+        _apply_server_address(new_address)
+        await ctx.send(f"✅ Server address updated to `{new_address}`.")
+        return
+
+    class ConfirmView(View):
+        def __init__(self):
+            super().__init__(timeout=60)
+            self.result = None
+
+        @discord.ui.button(label="Approve", style=discord.ButtonStyle.success)
+        async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
+            if interaction.user.id == 448896936481652777:
+                _apply_server_address(new_address)
+                await interaction.response.edit_message(content=f"✅ Approved by <@{interaction.user.id}>. Server address updated to `{new_address}`.", view=None)
+                self.result = True
+                self.stop()
+            else:
+                await interaction.response.send_message("🚫 Only the owner can approve this action.", ephemeral=True)
+
+        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger)
+        async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.edit_message(content="❌ Server address update cancelled.", view=None)
+            self.result = False
+            self.stop()
+
+    view = ConfirmView()
+    await ctx.send(f"⚠️ <@448896936481652777>, <@{author_id}> wants to set the server address to `{new_address}`.", view=view)
+
+def _apply_server_address(new_address):
+    with open(".env", "r") as f:
+        lines = f.readlines()
+    with open(".env", "w") as f:
+        for line in lines:
+            if line.startswith("SERVER_ADDRESS="):
+                f.write(f"SERVER_ADDRESS={new_address}\n")
+            else:
+                f.write(line)
+    load_dotenv(override=True)
 
 @bot.command(name="𝑩𝒆𝒆𝒃𝒐", aliases=["beebo", "ping"])
 async def beebo_ping(ctx):
@@ -327,7 +374,7 @@ async def reload(ctx):
 
     import asyncio
     async def delayed_restart():
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(2)
         import subprocess
         try:
             subprocess.run(["/root/beebo/reload_beebo.sh"], check=True)
@@ -346,12 +393,16 @@ async def reload(ctx):
 @bot.command(aliases=["bhelp", "beebohelp"])
 async def help(ctx):
     embed = discord.Embed(title="Beebo Command List", color=0xb0c0ff)
-    embed.add_field(name="!mcstatus", value="Check if the Minecraft server is online and who's on.", inline=False)
-    embed.add_field(name="!pingoffline", value="If the server is offline, alert the squad to start it.", inline=False)
-    embed.add_field(name="!startserver", value="Attempts to start the server using Aternos (restricted to ☁️ 𝓥𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
-    embed.add_field(name="!say", value="Send a custom message with an embed and ping MCSquad (restricted).", inline=False)
+    embed.add_field(name="!mcstatus / !status", value="Check if the Minecraft server is online and who’s on.", inline=False)
+    embed.add_field(name="!pingoffline / !offping", value="If the server is offline, alert the squad to start it.", inline=False)
+    embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Aternos (restricted to ☁️ 𝓥𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
+    embed.add_field(name="!say / !talk / !bcast", value="Send a custom message with an embed and ping MCSquad (restricted).", inline=False)
+    embed.add_field(name="!cakecheck, !viveracheck, !jennacheck, etc.", value="Check specific users’ status in a fun way.", inline=False)
     embed.add_field(name="!reloadenv / !rle", value="Reloads the environment settings <:pixel_cake:1368264542064345108>. Restricted.", inline=False)
     embed.add_field(name="!reload", value="Pulls latest code and restarts Beebo <:pixelGUY:1368269152334123049>. Restricted.", inline=False)
+    embed.add_field(name="!uptime / !upt", value="Shows how long Beebo has been running.", inline=False)
+    embed.add_field(name="!version / !ver", value="Shows the latest commit hash from Git.", inline=False)
+    embed.add_field(name="!setserver <address>", value="Request/update the Minecraft server address. Protected.", inline=False)
     embed.add_field(name="!help", value="You're looking at it.", inline=False)
     embed.set_footer(text="Bot made for keeping the realm alive and the squad notified.")
     await ctx.send(embed=embed)
