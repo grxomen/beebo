@@ -72,7 +72,7 @@ async def check_server_status():
             await channel.send(content="<@&1368225900486721616>", embed=embed)
         last_status = "offline"
 
-@bot.command()
+@bot.command(aliases=["status", "serverstatus"])
 async def mcstatus(ctx):
     server = JavaServer.lookup(SERVER_ADDRESS)
     try:
@@ -103,7 +103,7 @@ async def beebo_ping(ctx):
     embed.set_footer(text=f"Latency: {latency_ms:.2f} ms ({latency_ms/1000:.2f} sec)")
     await msg.edit(content=None, embed=embed)
 
-@bot.command()
+@bot.command(aliases=["upt", "alive"])
 async def uptime(ctx):
     uptime_seconds = int(time.time() - boot_time)
     minutes, seconds = divmod(uptime_seconds, 60)
@@ -115,7 +115,7 @@ async def uptime(ctx):
     )
     await ctx.send(embed=embed)
 
-@bot.command()
+@bot.command(aliases=["ver", "commit"])
 async def version(ctx):
     import subprocess
     try:
@@ -129,7 +129,7 @@ async def version(ctx):
     except Exception as e:
         await ctx.send(f"❌ Could not retrieve version: {e}")       
 
-@bot.command()
+@bot.command(aliases=["awake", "wakeserver"])
 async def startserver(ctx):
     if 1366796508288127066 not in [role.id for role in ctx.author.roles]:
         await ctx.send("🚫 You don't have permission to use this command.")
@@ -155,7 +155,7 @@ async def startserver(ctx):
     except Exception as e:
         await ctx.send(f"❌ Failed to start server: `{str(e)}`")
 
-@bot.command()
+@bot.command(aliases=["offping", "cacaw"])
 @cooldown(1, 300, BucketType.channel)  # once every 5 minutes per channel
 async def pingoffline(ctx):
     server = JavaServer.lookup(SERVER_ADDRESS)
@@ -204,7 +204,98 @@ async def cakecheck(ctx):
     file = discord.File("/root/beebo/assets/pixel_cake.png", filename="pixel_cake.png")
     await ctx.send(file=file, embed=embed)
 
-@bot.command()
+def get_presence_description(member, lines):
+    if not member:
+        return lines["not_found"]
+    status = str(member.status)
+    return lines.get(status, lines["default"])
+
+@bot.command(aliases=["vivera", "vscan"])
+async def viveracheck(ctx):
+    member = ctx.guild.get_member(533680872747171841)
+    desc = get_presence_description(member, {
+        "online": "🟢 Vivera is vibing online. Possibly watching everything in silence.",
+        "idle": "🌙 Vivera is idle... probably lost in deep lore.",
+        "dnd": "⛔ Do not disturb. Vivera’s in another dimension.",
+        "offline": "⚫ Vivera is offline... or just too cool to be seen.",
+        "not_found": "Couldn’t locate Vivera. Too ethereal.",
+        "default": "Vivera exists in a state beyond presence."
+    })
+    embed = discord.Embed(title="✨ Vivera Status", description=desc, color=0xd8b3ff)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=["jenna", "jscan", "statsqueen"])
+async def jennacheck(ctx):
+    member = ctx.guild.get_member(715950635282858094)
+    desc = get_presence_description(member, {
+        "online": "🟢 Jenna is online and probably checking five dashboards.",
+        "idle": "🌙 Jenna is idle. Give her a stat to monitor.",
+        "dnd": "⛔ Jenna is deep in analytics mode.",
+        "offline": "⚫ Jenna is offline. Stats are on their own now.",
+        "not_found": "Can’t find Jenna. Maybe she's optimizing the guild.",
+        "default": "Jenna is in stealth analyst mode."
+    })
+    embed = discord.Embed(title="📊 Jenna Scan", description=desc, color=0xffeaa7)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=["toast", "toastlord"])
+async def toastcheck(ctx):
+    member = ctx.guild.get_member(858462569043722271)
+    desc = get_presence_description(member, {
+        "online": "🟢 Toast is here — and Minecraft trembles.",
+        "idle": "🌙 Toast is idle. Possibly brewing potions.",
+        "dnd": "⛔ Toast is busy defending the realm.",
+        "offline": "⚫ Toast is offline. The chunk has unloaded.",
+        "not_found": "Toast is nowhere to be found. Server lag?",
+        "default": "Toast is in ghost mode."
+    })
+    embed = discord.Embed(title="🔥 Toast Tracker", description=desc, color=0xffc300)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=["asiasen", "asiapower"])
+async def asiasencheck(ctx):
+    member = ctx.guild.get_member(568577192682848267)
+    desc = get_presence_description(member, {
+        "online": "🟢 Asiasen is online. Eyes sharp, moves sharper.",
+        "idle": "🌙 Asiasen is idle. Awaiting the next call.",
+        "dnd": "⛔ Do not disturb. Probably doing boss things.",
+        "offline": "⚫ Asiasen is offline. Power-saving mode engaged.",
+        "not_found": "Asiasen is missing from the grid.",
+        "default": "Asiasen is operating from the shadows."
+    })
+    embed = discord.Embed(title="💼 Asiasen Ops Check", description=desc, color=0x7ed6df)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=["gooby", "sus", "loud"])
+async def goobycheck(ctx):
+    member = ctx.guild.get_member(883446198579634177)
+    desc = get_presence_description(member, {
+        "online": "🟢 Gooby is online. Probably yelling SUS at someone.",
+        "idle": "🌙 Gooby is idle. The calm before the scream.",
+        "dnd": "⛔ Do not disturb. Emergency meeting in progress.",
+        "offline": "⚫ Gooby is offline. Mic cooldown active.",
+        "not_found": "Gooby couldn’t be found. Sabotage?",
+        "default": "Gooby is venting through the shadows."
+
+    embed = discord.Embed(title="🔊 Gooby Voice Check", description=desc, color=0xf8a5c2)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=["meow", "simpstar", "brainfan"])
+async def meowstarcheck(ctx):
+    member = ctx.guild.get_member(1148630927686254602)
+    desc = get_presence_description(member, {
+        "online": "🟢 Meowstar is online — probably admiring your Among Us genius.",
+        "idle": "🌙 Meowstar is idle. Thinking about how big-brained you are.",
+        "dnd": "⛔ Do not disturb. Braincell charging in progress.",
+        "offline": "⚫ Meowstar is offline... maybe writing a fanfic about your galaxy brain.",
+        "not_found": "Meowstar not detected. Has he stopped praising you?",
+        "default": "Meowstar is AFK but spiritually simping."
+    })
+    embed = discord.Embed(title="🌟 Meowstar Worship Log", description=desc, color=0xa29bfe)
+    await ctx.send(embed=embed)
+
+
+@bot.command(aliases=["talk", "broadcast", "bcast"])
 async def say(ctx, *, message: str):
     if 1366796508288127066 not in [role.id for role in ctx.author.roles]:
         await ctx.send("🚫 You don't have permission to use this command.")
