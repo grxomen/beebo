@@ -325,18 +325,22 @@ async def reload(ctx):
         await ctx.send("🚫 You don't have permission to perform a full reload.")
         return
 
-    import subprocess, asyncio
+    import asyncio
+    async def delayed_restart():
+        await asyncio.sleep(1.5)
+        import subprocess
+        try:
+            subprocess.run(["/root/beebo/reload_beebo.sh"], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Reload failed: {e}")
+
     embed = discord.Embed(
         title="Restarting Beebo 🔁",
         description="Pulling latest code and restarting. Back in a sec...<:pixelGUY:1368269152334123049>",
         color=0xb0c0ff
     )
     await ctx.send(embed=embed)
-    await asyncio.sleep(1)
-    try:
-        subprocess.run(["/root/beebo/reload_beebo.sh"], check=True)
-    except subprocess.CalledProcessError as e:
-        await ctx.send(f"❌ Reload failed: {e}")
+    bot.loop.create_task(delayed_restart())
 
 
 @bot.command(aliases=["bhelp", "beebohelp"])
