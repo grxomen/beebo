@@ -388,16 +388,26 @@ async def reload(ctx):
     )
     await ctx.send(embed=embed)
     bot.loop.create_task(delayed_restart())
+
 @bot.command()
 async def gitstatus(ctx):
     import subprocess
     try:
-        status = subprocess.check_output(["git", "status", "--short"]).decode().strip()
-        if not status:
-            message = "✅ Working tree is clean."
+        result = subprocess.run(
+            ["git", "status", "--short"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if result.returncode != 0:
+            await ctx.send(f"❌ Git error:\n```{result.stderr}```")
+            return
+
+        output = result.stdout.strip()
+        if not output:
+            await ctx.send("✅ Working tree is clean.")
         else:
-            message = f"⚠️ Uncommitted changes:\n```diff\n{status}```"
-        await ctx.send(message)
+            await ctx.send(f"⚠️ Uncommitted changes:\n```diff\n{output}```")
     except Exception as e:
         await ctx.send(f"❌ Couldn't check Git status: {e}")
 
