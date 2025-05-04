@@ -388,7 +388,37 @@ async def reload(ctx):
     )
     await ctx.send(embed=embed)
     bot.loop.create_task(delayed_restart())
+@bot.command()
+async def gitstatus(ctx):
+    import subprocess
+    try:
+        status = subprocess.check_output(["git", "status", "--short"]).decode().strip()
+        if not status:
+            message = "✅ Working tree is clean."
+        else:
+            message = f"⚠️ Uncommitted changes:\n```diff\n{status}```"
+        await ctx.send(message)
+    except Exception as e:
+        await ctx.send(f"❌ Couldn't check Git status: {e}")
 
+@bot.command(aliases=["debug", "commands"])
+async def debugstatus(ctx):
+    if ctx.author.id not in [546650815297880066, 448896936481652777]:
+        await ctx.send("🚫 You don't have permission to use this command.")
+        return
+
+    embed = discord.Embed(title="🛠️ Beebo Debug Command List", color=0x462f80)
+    
+    for cmd in bot.commands:
+        aliases = ', '.join(cmd.aliases) if cmd.aliases else "None"
+        embed.add_field(
+            name=f"!{cmd.name}",
+            value=f"Aliases: `{aliases}`",
+            inline=False
+        )
+
+    embed.set_footer(text="These are all currently loaded commands. Dev eyes only.")
+    await ctx.send(embed=embed)
 
 @bot.command(aliases=["bhelp", "beebohelp"])
 async def help(ctx):
