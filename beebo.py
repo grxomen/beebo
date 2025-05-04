@@ -407,4 +407,15 @@ async def help(ctx):
     embed.set_footer(text="Bot made for keeping the realm alive and the squad notified.")
     await ctx.send(embed=embed)
 
+@bot.command()
+async def githelp(ctx):
+    embed = discord.Embed(title="💡 Git Cheat Sheet", color=0x462f80)
+    embed.add_field(name="🔄 Sync Latest Code", value="`git pull origin main`", inline=False)
+    embed.add_field(name="📤 Add & Push Changes", value="`git add .`\n`git commit -m \"msg\"`\n`git push origin main`", inline=False)
+    embed.add_field(name="🔍 Status & History", value="`git status`\n`git log --oneline`", inline=False)
+    embed.add_field(name="🧹 Undo Changes", value="`git checkout -- your_file.py`", inline=False)
+    embed.add_field(name="⚔️ Merge Conflict Fix", value="1. Manually edit\n2. `git add .`\n3. `git commit -m \"resolve conflict\"`", inline=False)
+    embed.set_footer(text="Use with great power. Git good.")
+    await ctx.send(embed=embed)
+
 bot.run(TOKEN)
