@@ -327,15 +327,23 @@ async def reload(ctx):
 
     import subprocess
     try:
-        subprocess.run(["/root/beebo/reload_beebo.sh"], check=True)
+        result = subprocess.run(
+            ["/root/beebo/reload_beebo.sh"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        output = result.stdout.decode().strip()
         embed = discord.Embed(
             title="Restarting Beebo 🔁",
             description="Pulling latest code and restarting. Back in a sec...<:pixelGUY:1368269152334123049>",
             color=0xb0c0ff
         )
+        embed.set_footer(text=f"Shell output: {output}")
         await ctx.send(embed=embed)
     except subprocess.CalledProcessError as e:
-        await ctx.send(f"❌ Reload failed: {e}")
+        await ctx.send(f"❌ Reload failed: {e}\n`{e.stderr.decode().strip()}`")
+
 
 @bot.command()
 async def help(ctx):
