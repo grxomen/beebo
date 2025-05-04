@@ -325,27 +325,21 @@ async def reload(ctx):
         await ctx.send("🚫 You don't have permission to perform a full reload.")
         return
 
-    import subprocess
+    import subprocess, asyncio
+    embed = discord.Embed(
+        title="Restarting Beebo 🔁",
+        description="Pulling latest code and restarting. Back in a sec...<:pixelGUY:1368269152334123049>",
+        color=0xb0c0ff
+    )
+    await ctx.send(embed=embed)
+    await asyncio.sleep(1)
     try:
-        result = subprocess.run(
-            ["/root/beebo/reload_beebo.sh"],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        output = result.stdout.decode().strip()
-        embed = discord.Embed(
-            title="Restarting Beebo 🔁",
-            description="Pulling latest code and restarting. Back in a sec...<:pixelGUY:1368269152334123049>",
-            color=0xb0c0ff
-        )
-        embed.set_footer(text=f"Shell output: {output}")
-        await ctx.send(embed=embed)
+        subprocess.run(["/root/beebo/reload_beebo.sh"], check=True)
     except subprocess.CalledProcessError as e:
-        await ctx.send(f"❌ Reload failed: {e}\n`{e.stderr.decode().strip()}`")
+        await ctx.send(f"❌ Reload failed: {e}")
 
 
-@bot.command()
+@bot.command(aliases=["bhelp", "beebohelp"])
 async def help(ctx):
     embed = discord.Embed(title="Beebo Command List", color=0xb0c0ff)
     embed.add_field(name="!mcstatus", value="Check if the Minecraft server is online and who's on.", inline=False)
