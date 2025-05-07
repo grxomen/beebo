@@ -565,8 +565,49 @@ async def suggest(ctx, action=None, *, arg=None):
             await ctx.send("No suggestions found.")
             return
 
-        # Pagination code here (same as before)
-        # ...
+        # Pagination code here
+        pages = []
+        for i in range(0, len(filtered), 5):
+            embed = discord.Embed(
+                title=f"Suggestions (Page {i//5 + 1}/{len(filtered)//5 + 1})",
+                color=0xb0c0ff
+            )
+            for j, s in enumerate(filtered[i:i+5], start=i+1):
+                embed.add_field(
+                    name=f"#{j} - {s['user']}",
+                    value=s['message'],
+                    inline=False
+                )
+            pages.append(embed)
+
+        # Send first page
+        msg = await ctx.send(embed=pages[0])
+        
+        # Add reactions if multiple pages
+        if len(pages) > 1:
+            await msg.add_reaction("⬅️")
+            await msg.add_reaction("➡️")
+
+            def check(reaction, user):
+                return user == ctx.author and str(reaction.emoji) in ["⬅️", "➡️"]
+
+            page = 0
+            while True:
+                try:
+                    reaction, _ = await bot.wait_for("reaction_add", timeout=60.0, check=check)
+                    
+                    if str(reaction.emoji) == "➡️" and page < len(pages)-1:
+                        page += 1
+                    elif str(reaction.emoji) == "⬅️" and page > 0:
+                        page -= 1
+                        
+                    await msg.edit(embed=pages[page])
+                    await msg.remove_reaction(reaction, ctx.author)
+                    
+                except asyncio.TimeoutError:
+                    await msg.clear_reactions()
+                    break
+        return
 
     # DELETE
     if action.lower() == "delete":
