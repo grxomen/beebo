@@ -520,16 +520,16 @@ async def suggest(ctx, action=None, *, arg=None):
         await ctx.send("Usage: !suggest <message> | !suggest view [keyword/user] | !suggest delete <index>")
         return
 
-if now - last_time < COOLDOWN_SECONDS:
-    remaining = int(COOLDOWN_SECONDS - (now - last_time))
-    embed = discord.Embed(
-        title="⏳ Slow down!",
-        description=f"You're on cooldown. Try again in **{remaining}** seconds.",
-        color=discord.Color.orange()
-    )
-    embed.set_footer(text="Only devs can bypass this.")
-    await ctx.send(embed=embed)
-    return
+    if now - last_time < COOLDOWN_SECONDS:
+        remaining = int(COOLDOWN_SECONDS - (now - last_time))
+        embed = discord.Embed(
+            title="⏳ Slow down!",
+            description=f"You're on cooldown. Try again in **{remaining}** seconds.",
+            color=discord.Color.orange()
+        )
+        embed.set_footer(text="Only devs can bypass this.")
+        await ctx.send(embed=embed)
+        return
 
    # ADD
 if action.lower() not in ["view", "delete"]:
