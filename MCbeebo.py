@@ -4,6 +4,7 @@ import datetime
 import time
 import random
 import json
+import aiohttp
 from discord.ui import Button, View
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
@@ -25,6 +26,7 @@ GUILD_ID = 1046624035464810496
 STATUS_CHANNEL_ID = 1369315007942230036
 DEV_LOG_CHANNEL_ID = 1369314903701065768
 SUGGESTIONS_FILE = "suggestions.json"
+WEBHOOK_URL = os.getenv("SUGGESTIONS_WEBHOOK")
 MC_SERVER_PORT = int(os.getenv("MC_SERVER_PORT", 64886))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 MC_SERVER_IP = os.getenv("MC_SERVER_IP")
@@ -498,41 +500,107 @@ async def daily_server_status():
         await channel.send(f"🔴 Minecraft server is offline or unreachable.\nError: `{e}`")
 
 # --- Feature 3: Suggestion Collection ---
+def load_suggestions():
+    if not os.path.exists(SUGGESTIONS_FILE):
+        return []
+    with open(SUGGESTIONS_FILE, "r") as f:
+        return json.load(f)
+
+def save_suggestions(suggestions):
+    with open(SUGGESTIONS_FILE, "w") as f:
+        json.dump(suggestions, f, indent=2)
+
 @bot.command()
-async def suggest(ctx, *, message):
-    suggestion = {
-        "user": str(ctx.author),
-        "user_id": ctx.author.id,
-        "message": message,
-        "timestamp": datetime.datetime.utcnow().isoformat()
-    }
-    try:
-        # Save to file
-        if os.path.exists(SUGGESTIONS_FILE):
-            with open(SUGGESTIONS_FILE, "r") as f:
-                suggestions = json.load(f)
-        else:
-            suggestions = []
+async def suggest(ctx, action=None, *, arg=None):
+    suggestions = load_suggestions()
 
+    if action is None:
+        await ctx.send("Usage: !suggest <message> | !suggest view [keyword/user] | !suggest delete <index>")
+        return
+
+    # ADD
+    if action.lower() not in ["view", "delete"]:
+        message = f"{action} {arg}" if arg else action
+        suggestion = {
+            "user": str(ctx.author),
+            "user_id": ctx.author.id,
+            "message": message,
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
         suggestions.append(suggestion)
-        with open(SUGGESTIONS_FILE, "w") as f:
-            json.dump(suggestions, f, indent=2)
+        save_suggestions(suggestions)
 
-        # Send to webhook if available
+        # Webhook
         if WEBHOOK_URL:
             async with aiohttp.ClientSession() as session:
                 await session.post(WEBHOOK_URL, json={
-                    "content": f"💡 New suggestion from **{ctx.author}**:\n{message}"
+                    "content": f"💡 New suggestion from {ctx.author}:\n{message}"
                 })
 
-        # Send to log channel
+        # Log channel
         log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
         if log_channel:
-            await log_channel.send(f"💡 New suggestion from **{ctx.author}**:\n{message}")
+            await log_channel.send(f"💡 New suggestion from {ctx.author}:\n{message}")
 
-        await ctx.send("✅ Suggestion received! Thank you.")
-    except Exception as e:
-        await ctx.send(f"❌ Failed to save suggestion: {e}")
+        await ctx.send("✅ Suggestion received!")
+        return
+
+    # VIEW
+    if action.lower() == "view":
+        filtered = suggestions
+        if arg:
+            arg = arg.lower()
+            filtered = [s for s in suggestions if arg in s["message"].lower() or arg in s["user"].lower()]
+        if not filtered:
+            await ctx.send("No suggestions found.")
+            return
+
+        pages = []
+        for i in range(0, len(filtered), 5):
+            chunk = filtered[i:i+5]
+            embed = discord.Embed(
+                title="Suggestions",
+                description="Here are the current suggestions:",
+                color=discord.Color.blue()
+            )
+            for idx, s in enumerate(chunk, start=i + 1):
+                embed.add_field(name=f"{idx}. {s['user']}", value=s["message"], inline=False)
+            pages.append(embed)
+
+        current = 0
+        msg = await ctx.send(embed=pages[current])
+        await msg.add_reaction("⬅️")
+        await msg.add_reaction("➡️")
+
+        def check(reaction, user):
+            return user == ctx.author and str(reaction.emoji) in ["⬅️", "➡️"] and reaction.message.id == msg.id
+
+        while True:
+            try:
+                reaction, user = await bot.wait_for("reaction_add", timeout=60.0, check=check)
+                if str(reaction.emoji) == "➡️" and current < len(pages) - 1:
+                    current += 1
+                    await msg.edit(embed=pages[current])
+                elif str(reaction.emoji) == "⬅️" and current > 0:
+                    current -= 1
+                    await msg.edit(embed=pages[current])
+                await msg.remove_reaction(reaction, user)
+            except:
+                break
+        return
+
+    # DELETE
+    if action.lower() == "delete":
+        if not arg or not arg.isdigit():
+            await ctx.send("Please provide a valid index number. Example: !suggest delete 3")
+            return
+        index = int(arg) - 1
+        if 0 <= index < len(suggestions):
+            deleted = suggestions.pop(index)
+            save_suggestions(suggestions)
+            await ctx.send(f"🗑️ Deleted suggestion #{index + 1} by {deleted['user']}.")
+        else:
+            await ctx.send("That index doesn't exist.")
 
 # --- Feature 4: Developer Command Logging ---
 @bot.listen('on_command')
