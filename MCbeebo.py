@@ -530,11 +530,11 @@ async def suggest(ctx, action=None, *, arg=None):
         save_suggestions(suggestions)
 
         # Webhook
-        if WEBHOOK_URL:
-            async with aiohttp.ClientSession() as session:
-                await session.post(WEBHOOK_URL, json={
-                    "content": f"💡 New suggestion from {ctx.author}:\n{message}"
-                })
+        # if WEBHOOK_URL:
+        #    async with aiohttp.ClientSession() as session:
+        #        await session.post(WEBHOOK_URL, json={
+        #            "content": f"💡 New suggestion from {ctx.author}:\n{message}"
+        #        })
 
         # Log channel
         log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
