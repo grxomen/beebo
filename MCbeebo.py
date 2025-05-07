@@ -532,17 +532,17 @@ async def suggest(ctx, action=None, *, arg=None):
         return
 
    # ADD
-if action.lower() not in ["view", "delete"]:
-    now = time.time()
-    user_id = ctx.author.id
+    if action.lower() not in ["view", "delete"]:
+        now = time.time()
+        user_id = ctx.author.id
 
-    if user_id not in DEV_USER_ID:
-        last_time = cooldowns.get(user_id, 0)
-        if now - last_time < COOLDOWN_SECONDS:
-            remaining = int(COOLDOWN_SECONDS - (now - last_time))
-            await ctx.send(f"⏳ You're on cooldown! Try again in {remaining} seconds.")
-            return
-        cooldowns[user_id] = now  # update only if cooldown was enforced
+        if user_id not in DEV_USER_ID:
+            last_time = cooldowns.get(user_id, 0)
+            if now - last_time < COOLDOWN_SECONDS:
+                remaining = int(COOLDOWN_SECONDS - (now - last_time))
+                await ctx.send(f"⏳ You're on cooldown! Try again in {remaining} seconds.")
+                return
+            cooldowns[user_id] = now  # update only if cooldown was enforced
 
     message = f"{action} {arg}" if arg else action
     suggestion = {
