@@ -3,6 +3,7 @@ import discord
 import datetime
 import time
 import random
+import json
 from discord.ui import Button, View
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
@@ -400,6 +401,9 @@ async def reload(ctx):
 
 @bot.command()
 async def gitstatus(ctx):
+    if ctx.author.id not in [546650815297880066, 448896936481652777]:
+        await ctx.send("🚫 You don't have permission to use this command.")
+        return    
     import subprocess
     try:
         result = subprocess.run(
@@ -446,6 +450,7 @@ async def help(ctx):
     embed.add_field(name="!pingoffline / !offping", value="If the server is offline, alert the squad to start it.", inline=False)
     embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Aternos (restricted to ☁️ 𝓥𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
     embed.add_field(name="!say / !talk / !bcast", value="Send a custom message with an embed and ping MCSquad (restricted).", inline=False)
+    embed.add_field(name="!suggest", value="Submit changes you'd like to see in 𝑩𝒆𝒆𝒃𝒐.", inline=False)
     embed.add_field(name="!cakecheck, !viveracheck, !jennacheck, etc.", value="Check specific users’ status in a fun way.", inline=False)
     embed.add_field(name="!reloadenv / !rle", value="Reloads the environment settings <:pixel_cake:1368264542064345108>. Restricted.", inline=False)
     embed.add_field(name="!reload", value="Pulls latest code and restarts Beebo <:pixelGUY:1368269152334123049>. Restricted.", inline=False)
@@ -468,6 +473,10 @@ async def daily_server_status():
 
 @bot.command()
 async def githelp(ctx):
+    if ctx.author.id not in [546650815297880066, 448896936481652777]:
+        await ctx.send("🚫 You don't have permission to use this command.")
+        return
+    
     embed = discord.Embed(title="💡 Git Cheat Sheet", color=0x462f80)
     embed.add_field(name="🔄 Sync Latest Code", value="`git pull origin main`", inline=False)
     embed.add_field(name="📤 Add & Push Changes", value="`git add .`\n`git commit -m \"msg\"`\n`git push origin main`", inline=False)
