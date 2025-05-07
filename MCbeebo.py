@@ -504,25 +504,22 @@ def save_suggestions(suggestions):
 async def suggest(ctx, action=None, *, arg=None):
     """Submit or manage suggestions for the bot"""
     suggestions = load_suggestions()
-<<<<<<< HEAD
     now = time.time()  # Capture time once
 
     # Cooldown check first
     user_id = ctx.author.id
     if user_id not in DEV_USER_ID:  # Only enforce cooldown for non-developers
-=======
+
     now = time.time()
     user_id = ctx.author.id
 
     # Cooldown check for non-devs
     if user_id not in DEV_USER_ID:
->>>>>>> 4fdfc4c22908a0c14aa94bd4d058e4572d9d7f3d
         last_time = cooldowns.get(user_id, 0)
         if now - last_time < COOLDOWN_SECONDS:
             remaining = int(COOLDOWN_SECONDS - (now - last_time))
             embed = discord.Embed(
                 title="⏳ Slow down!",
-<<<<<<< HEAD
                 description=f"You're on cooldown. Try again in **{remaining}** seconds.",
                 color=discord.Color.orange()
             )
@@ -537,7 +534,6 @@ async def suggest(ctx, action=None, *, arg=None):
 
     # ADD
     if action.lower() not in ["view", "delete"]:
-=======
                 description=f"You're on cooldown. Try again in {remaining} seconds.",
                 color=discord.Color.orange()
             )
@@ -553,7 +549,6 @@ async def suggest(ctx, action=None, *, arg=None):
 
     # Add suggestion
     if action not in ["view", "delete"]:
->>>>>>> 4fdfc4c22908a0c14aa94bd4d058e4572d9d7f3d
         message = f"{action} {arg}" if arg else action
         suggestion = {
             "user": str(ctx.author),
@@ -564,11 +559,7 @@ async def suggest(ctx, action=None, *, arg=None):
         suggestions.append(suggestion)
         save_suggestions(suggestions)
 
-<<<<<<< HEAD
-        # Log channel
-=======
         # Log to dev channel
->>>>>>> 4fdfc4c22908a0c14aa94bd4d058e4572d9d7f3d
         log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
         if log_channel:
             await log_channel.send(f"💡 New suggestion from {ctx.author}:\n{message}")
@@ -592,7 +583,6 @@ async def suggest(ctx, action=None, *, arg=None):
         # Pagination code here (same as before)
         # ...
 
-<<<<<<< HEAD
     # DELETE
     if action.lower() == "delete":
         if ctx.author.id not in DEV_USER_ID:
@@ -602,12 +592,11 @@ async def suggest(ctx, action=None, *, arg=None):
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
-=======
-    # Delete suggestion
+
+# Delete suggestion
     if action == "delete":
         if ctx.author.id not in DEV_USER_ID:
             await ctx.send("🚫 Only devs can delete suggestions.")
->>>>>>> 4fdfc4c22908a0c14aa94bd4d058e4572d9d7f3d
             return
 
         if not arg or not arg.isdigit():
