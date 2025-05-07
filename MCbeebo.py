@@ -56,14 +56,20 @@ async def on_ready():
     check_server_status.start()
 
 @tasks.loop(hours=3)
+last_status = "unknown"
+
 async def check_server_status():
     global last_status
     channel = bot.get_channel(CHANNEL_ID)
+    if channel is None:
+        print("Channel not found!")
+        return
+
     server = JavaServer.lookup(SERVER_ADDRESS)
 
     try:
         status = server.status()
-        if last_status == "offline":
+        if last_status != "online":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
             embed.add_field(name="Java IP", value="officialserv.aternos.me", inline=False)
             embed.add_field(name="Bedrock Port", value="64886", inline=False)
@@ -81,11 +87,11 @@ async def check_server_status():
             print("Server still online. No alert sent.")
     except Exception as e:
         print(f"Error checking server: {e}")
-        if last_status == "online":
+        if last_status != "offline":
             embed = discord.Embed(title="**Minecraft Server is OFFLINE or SLEEPING**", color=0xff5555)
             embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
-            await channel.send(content="<@&1368225900486721616>", embed=embed)
-        last_status = "offline"
+            await channel.send(content=ROLE_TO_TAG, embed=embed)
+            last_status = "offline"
 
 @bot.command(aliases=["status", "serverstatus"])
 async def mcstatus(ctx):
@@ -584,7 +590,7 @@ async def suggest(ctx, action=None, *, arg=None):
         if ctx.author.id not in DEV_USER_ID:
             embed = discord.Embed(
                 title="❌ Permission Denied",
-                description="Only bot developers can delete suggestions.",
+                description="Only devs can delete suggestions.",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
@@ -677,7 +683,7 @@ async def suggest(ctx, action=None, *, arg=None):
         if ctx.author.id not in DEV_USER_ID:
             embed = discord.Embed(
                 title="❌ Permission Denied",
-                description="Only bot developers can delete suggestions.",
+                description="Only devs can delete suggestions.",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
