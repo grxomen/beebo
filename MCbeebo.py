@@ -509,12 +509,6 @@ async def suggest(ctx, action=None, *, arg=None):
     # Cooldown check first
     user_id = ctx.author.id
     if user_id not in DEV_USER_ID:  # Only enforce cooldown for non-developers
-
-    now = time.time()
-    user_id = ctx.author.id
-
-    # Cooldown check for non-devs
-    if user_id not in DEV_USER_ID:
         last_time = cooldowns.get(user_id, 0)
         if now - last_time < COOLDOWN_SECONDS:
             remaining = int(COOLDOWN_SECONDS - (now - last_time))
