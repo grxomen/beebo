@@ -1,5 +1,6 @@
 import os
 import discord
+import datetime
 import time
 import random
 from discord.ui import Button, View
@@ -19,6 +20,14 @@ ROLE_TO_TAG = os.getenv("ROLE_TO_TAG")
 ATERNO_EMAIL = os.getenv("ATERNO_EMAIL")
 ATERNO_PASSWORD = os.getenv("ATERNO_PASSWORD")
 ANNOUNCEMENT_CHANNEL_ID = 1359974211367469147
+GUILD_ID = 1046624035464810496
+STATUS_CHANNEL_ID = 1369315007942230036
+DEV_LOG_CHANNEL_ID = 1369314903701065768
+SUGGESTIONS_FILE = "suggestions.json"
+MC_SERVER_PORT = int(os.getenv("MC_SERVER_PORT", 64886))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+MC_SERVER_IP = os.getenv("MC_SERVER_IP")
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -447,6 +456,16 @@ async def help(ctx):
     embed.set_footer(text="Bot made for keeping the realm alive and the squad notified.")
     await ctx.send(embed=embed)
 
+@tasks.loop(time=datetime.time(hour=3, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))))  # 3AM EST
+async def daily_server_status():
+    channel = bot.get_channel(STATUS_CHANNEL_ID)
+    try:
+        server = JavaServer.lookup(f"{MC_SERVER_IP}:{MC_SERVER_PORT}")
+        status = server.status()
+        await channel.send(f"🟢 Minecraft server is online with {status.players.online} player(s).")
+    except Exception as e:
+        await channel.send(f"🔴 Minecraft server is offline or unreachable.\nError: `{e}`")
+
 @bot.command()
 async def githelp(ctx):
     embed = discord.Embed(title="💡 Git Cheat Sheet", color=0x462f80)
@@ -457,5 +476,62 @@ async def githelp(ctx):
     embed.add_field(name="⚔️ Merge Conflict Fix", value="1. Manually edit\n2. `git add .`\n3. `git commit -m \"resolve conflict\"`", inline=False)
     embed.set_footer(text="Use with great power. Git good.")
     await ctx.send(embed=embed)
+
+# --- Feature 2: Minecraft Server Daily Status Report ---
+@tasks.loop(time=datetime.time(hour=3, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))))  # 3AM EST
+async def daily_server_status():
+    channel = bot.get_channel(STATUS_CHANNEL_ID)
+    try:
+        server = JavaServer.lookup(f"{MC_SERVER_IP}:{MC_SERVER_PORT}")
+        status = server.status()
+        await channel.send(f"🟢 Minecraft server is online with {status.players.online} player(s).")
+    except Exception as e:
+        await channel.send(f"🔴 Minecraft server is offline or unreachable.\nError: `{e}`")
+
+# --- Feature 3: Suggestion Collection ---
+@bot.command()
+async def suggest(ctx, *, message):
+    suggestion = {
+        "user": str(ctx.author),
+        "user_id": ctx.author.id,
+        "message": message,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+    try:
+        # Save to file
+        if os.path.exists(SUGGESTIONS_FILE):
+            with open(SUGGESTIONS_FILE, "r") as f:
+                suggestions = json.load(f)
+        else:
+            suggestions = []
+
+        suggestions.append(suggestion)
+        with open(SUGGESTIONS_FILE, "w") as f:
+            json.dump(suggestions, f, indent=2)
+
+        # Send to webhook if available
+        if WEBHOOK_URL:
+            async with aiohttp.ClientSession() as session:
+                await session.post(WEBHOOK_URL, json={
+                    "content": f"💡 New suggestion from **{ctx.author}**:\n{message}"
+                })
+
+        # Send to log channel
+        log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(f"💡 New suggestion from **{ctx.author}**:\n{message}")
+
+        await ctx.send("✅ Suggestion received! Thank you.")
+    except Exception as e:
+        await ctx.send(f"❌ Failed to save suggestion: {e}")
+
+# --- Feature 4: Developer Command Logging ---
+@bot.listen('on_command')
+async def log_dev_commands(ctx):
+    if ctx.guild and ctx.guild.id == GUILD_ID:
+        log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(f"🛠️ Command `{ctx.command}` used by **{ctx.author}** in #{ctx.channel}")
+
 
 bot.run(TOKEN)
