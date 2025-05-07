@@ -32,6 +32,7 @@ MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 cooldowns = {}  # Maps user_id to last suggestion timestamp
 DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 858462569043722271]  # Replace with your actual dev ID  # Replace with your actual dev ID
 COOLDOWN_SECONDS = 600
+last_status = "unknown"
 
 
 intents = discord.Intents.default()
@@ -56,7 +57,6 @@ async def on_ready():
     check_server_status.start()
 
 @tasks.loop(hours=3)
-last_status = "unknown"
 
 async def check_server_status():
     global last_status
