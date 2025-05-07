@@ -581,6 +581,23 @@ async def suggest(ctx, action=None, *, arg=None):
         else:
             await ctx.send("Invalid suggestion index.")
 
+@bot.command()
+@commands.is_owner()  # Only you can run this
+async def testsuggest(ctx, attempts: int = 5):
+    """Test the spam protection in !suggest. Usage: !testsuggest [attempts]"""
+    cooldowns.clear()  # Reset cooldown tracker
+    test_msg = "Stress-testing suggestion system"
+    
+    for i in range(attempts):
+        # Simulate a !suggest command
+        fake_ctx = ctx
+        fake_ctx.message.content = f"!suggest {test_msg}"
+        await bot.process_commands(fake_ctx.message)
+        await ctx.send(f"Attempt {i+1}/{attempts} - Sent: `!suggest`")
+        await asyncio.sleep(0.5)  # Avoid rate limits
+    
+    await ctx.send(f"**Test complete.** Check cooldowns: `{cooldowns.get(ctx.author.id, 'None')}`")
+
 # --- Developer Command Logging ---
 @bot.listen('on_command')
 async def log_dev_commands(ctx):
