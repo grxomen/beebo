@@ -4,13 +4,14 @@ import datetime
 import time
 import random
 import json
-import aiohttp
 from discord.ui import Button, View
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from python_aternos import Client
 from dotenv import load_dotenv
 from discord.ext.commands import cooldown, BucketType
+
+# commit 27ce7b6
 
 # Load .env variables
 load_dotenv()
@@ -27,12 +28,10 @@ STATUS_CHANNEL_ID = 1369315007942230036
 DEV_LOG_CHANNEL_ID = 1369314903701065768
 SUGGESTIONS_FILE = "suggestions.json"
 MC_SERVER_PORT = int(os.getenv("MC_SERVER_PORT", 64886))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 MC_SERVER_IP = os.getenv("MC_SERVER_IP")
-cooldowns = {}  # Maps user_id to last suggestion timestamp
-DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 858462569043722271]  # Replace with your actual dev ID  # Replace with your actual dev ID
+DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 858462569043722271]
 COOLDOWN_SECONDS = 600
-
+cooldowns = {}  # Maps user_id to last suggestion timestamp
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -79,8 +78,8 @@ async def check_server_status():
             last_status = "online"
         else:
             print("Server still online. No alert sent.")
-    except Exception as e:
-        print(f"Error checking server: {e}")
+    except:
+        print("Server is offline or unreachable.")
         if last_status == "online":
             embed = discord.Embed(title="**Minecraft Server is OFFLINE or SLEEPING**", color=0xff5555)
             embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
@@ -277,9 +276,9 @@ async def viveracheck(ctx):
     desc = get_presence_description(member, {
         "online": "🟢 Vivera is vibing online. Possibly watching everything in silence.",
         "idle": "🌙 Vivera is idle... probably lost in deep lore.",
-        "dnd": "⛔ Do not disturb. Vivera’s in another dimension.",
+        "dnd": "⛔ Do not disturb. Vivera's in another dimension.",
         "offline": "⚫ Vivera is offline... or just too cool to be seen.",
-        "not_found": "Couldn’t locate Vivera. Too ethereal.",
+        "not_found": "Couldn't locate Vivera. Too ethereal.",
         "default": "Vivera exists in a state beyond presence."
     })
     embed = discord.Embed(title="✨ Vivera Status", description=desc, color=0xd8b3ff)
@@ -293,7 +292,7 @@ async def jennacheck(ctx):
         "idle": "🌙 Jenna is idle. Give her a stat to monitor.",
         "dnd": "⛔ Jenna is deep in analytics mode.",
         "offline": "⚫ Jenna is offline. Stats are on their own now.",
-        "not_found": "Can’t find Jenna. Maybe she's optimizing the guild.",
+        "not_found": "Can't find Jenna. Maybe she's optimizing the guild.",
         "default": "Jenna is in stealth analyst mode."
     })
     embed = discord.Embed(title="📊 Jenna Scan", description=desc, color=0xffeaa7)
@@ -335,7 +334,7 @@ async def goobycheck(ctx):
         "idle": "🌙 Gooby is idle. The calm before the scream.",
         "dnd": "⛔ Do not disturb. Emergency meeting in progress.",
         "offline": "⚫ Gooby is offline. Mic cooldown active.",
-        "not_found": "Gooby couldn’t be found. Sabotage?",
+        "not_found": "Gooby couldn't be found. Sabotage?",
         "default": "Gooby is venting through the shadows."
     })
     embed = discord.Embed(title="🔊 Gooby Voice Check", description=desc, color=0xf8a5c2)
@@ -375,7 +374,7 @@ async def reloadenv(ctx):
     load_dotenv(override=True)
     embed = discord.Embed(
         title="Environment Reloaded ✅",
-        description="Configuration has been reloaded from .env. Beebo’s got the latest settings <:pixel_cake:1368264542064345108>.",
+        description="Configuration has been reloaded from .env. Beebo's got the latest settings <:pixel_cake:1368264542064345108>.",
         color=0xb0c0ff
     )
     await ctx.send(embed=embed)
@@ -450,12 +449,12 @@ async def debugstatus(ctx):
 @bot.command(aliases=["bhelp", "beebohelp"])
 async def help(ctx):
     embed = discord.Embed(title="Beebo Command List", color=0xb0c0ff)
-    embed.add_field(name="!mcstatus / !status", value="Check if the Minecraft server is online and who’s on.", inline=False)
+    embed.add_field(name="!mcstatus / !status", value="Check if the Minecraft server is online and who's on.", inline=False)
     embed.add_field(name="!pingoffline / !offping", value="If the server is offline, alert the squad to start it.", inline=False)
-    embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Aternos (restricted to ☁️ 𝓥𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
+    embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Aternos (restricted to ☁️ �𝓿𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
     embed.add_field(name="!say / !talk / !bcast", value="Send a custom message with an embed and ping MCSquad (restricted).", inline=False)
     embed.add_field(name="!suggest", value="Submit changes you'd like to see in 𝑩𝒆𝒆𝒃𝒐.", inline=False)
-    embed.add_field(name="!cakecheck, !viveracheck, !jennacheck, etc.", value="Check specific users’ status in a fun way.", inline=False)
+    embed.add_field(name="!cakecheck, !viveracheck, !jennacheck, etc.", value="Check specific users' status in a fun way.", inline=False)
     embed.add_field(name="!reloadenv / !rle", value="Reloads the environment settings <:pixel_cake:1368264542064345108>. Restricted.", inline=False)
     embed.add_field(name="!reload", value="Pulls latest code and restarts Beebo <:pixelGUY:1368269152334123049>. Restricted.", inline=False)
     embed.add_field(name="!uptime / !upt", value="Shows how long Beebo has been running.", inline=False)
@@ -490,18 +489,7 @@ async def githelp(ctx):
     embed.set_footer(text="Use with great power. Git good.")
     await ctx.send(embed=embed)
 
-# --- Feature 2: Minecraft Server Daily Status Report ---
-@tasks.loop(time=datetime.time(hour=3, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=-5))))  # 3AM EST
-async def daily_server_status():
-    channel = bot.get_channel(STATUS_CHANNEL_ID)
-    try:
-        server = JavaServer.lookup(f"{MC_SERVER_IP}:{MC_SERVER_PORT}")
-        status = server.status()
-        await channel.send(f"🟢 Minecraft server is online with {status.players.online} player(s).")
-    except Exception as e:
-        await channel.send(f"🔴 Minecraft server is offline or unreachable.\nError: `{e}`")
-
-# --- Feature 3: Suggestion Collection ---
+# --- Suggestion Collection ---
 def load_suggestions():
     if not os.path.exists(SUGGESTIONS_FILE):
         return []
@@ -515,52 +503,47 @@ def save_suggestions(suggestions):
 @bot.command()
 async def suggest(ctx, action=None, *, arg=None):
     suggestions = load_suggestions()
+    now = time.time()  # Capture time once
+
+    # Cooldown check first
+    user_id = ctx.author.id
+    if user_id not in DEV_USER_ID:  # Only enforce cooldown for non-developers
+        last_time = cooldowns.get(user_id, 0)
+        if now - last_time < COOLDOWN_SECONDS:
+            remaining = int(COOLDOWN_SECONDS - (now - last_time))
+            embed = discord.Embed(
+                title="⏳ Slow down!",
+                description=f"You're on cooldown. Try again in **{remaining}** seconds.",
+                color=discord.Color.orange()
+            )
+            embed.set_footer(text="Only devs can bypass this.")
+            await ctx.send(embed=embed)
+            return
+        cooldowns[user_id] = now  # Update cooldown
 
     if action is None:
         await ctx.send("Usage: !suggest <message> | !suggest view [keyword/user] | !suggest delete <index>")
         return
 
-if now - last_time < COOLDOWN_SECONDS:
-    remaining = int(COOLDOWN_SECONDS - (now - last_time))
-    embed = discord.Embed(
-        title="⏳ Slow down!",
-        description=f"You're on cooldown. Try again in **{remaining}** seconds.",
-        color=discord.Color.orange()
-    )
-    embed.set_footer(text="Only devs can bypass this.")
-    await ctx.send(embed=embed)
-    return
+    # ADD
+    if action.lower() not in ["view", "delete"]:
+        message = f"{action} {arg}" if arg else action
+        suggestion = {
+            "user": str(ctx.author),
+            "user_id": user_id,
+            "message": message,
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        }
+        suggestions.append(suggestion)
+        save_suggestions(suggestions)
 
-   # ADD
-if action.lower() not in ["view", "delete"]:
-    now = time.time()
-    user_id = ctx.author.id
+        # Log channel
+        log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(f"💡 New suggestion from {ctx.author}:\n{message}")
 
-    if user_id not in DEV_USER_ID:
-        last_time = cooldowns.get(user_id, 0)
-        if now - last_time < COOLDOWN_SECONDS:
-            remaining = int(COOLDOWN_SECONDS - (now - last_time))
-            await ctx.send(f"⏳ You're on cooldown! Try again in {remaining} seconds.")
-            return
-        cooldowns[user_id] = now  # update only if cooldown was enforced
-
-    message = f"{action} {arg}" if arg else action
-    suggestion = {
-        "user": str(ctx.author),
-        "user_id": user_id,
-        "message": message,
-        "timestamp": datetime.datetime.utcnow().isoformat()
-    }
-    suggestions.append(suggestion)
-    save_suggestions(suggestions)
-
-    log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
-    if log_channel:
-        await log_channel.send(f"💡 New suggestion from {ctx.author}:\n{message}")
-
-    await ctx.send("✅ Suggestion received!")
-    return
-
+        await ctx.send("✅ Suggestion received!")
+        return
 
     # VIEW
     if action.lower() == "view":
@@ -606,12 +589,12 @@ if action.lower() not in ["view", "delete"]:
                 break
         return
 
-   # DELETE
+    # DELETE
     if action.lower() == "delete":
         if ctx.author.id not in DEV_USER_ID:
             embed = discord.Embed(
                 title="❌ Permission Denied",
-                description="Only bot developers can delete suggestions.",
+                description="Only devs can delete suggestions.",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
@@ -637,7 +620,7 @@ if action.lower() not in ["view", "delete"]:
         await ctx.send(embed=embed)
         return
 
-# --- Feature 4: Developer Command Logging ---
+# --- Developer Command Logging ---
 @bot.listen('on_command')
 async def log_dev_commands(ctx):
     if ctx.guild and ctx.guild.id == GUILD_ID:
