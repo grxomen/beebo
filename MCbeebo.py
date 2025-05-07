@@ -501,7 +501,6 @@ def save_suggestions(suggestions):
         json.dump(suggestions, f, indent=2)
 
 @bot.command()
-@bot.command()
 async def suggest(ctx, action=None, *, arg=None):
     """Submit or manage suggestions for the bot"""
     suggestions = load_suggestions()
