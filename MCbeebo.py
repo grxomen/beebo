@@ -501,6 +501,7 @@ def save_suggestions(suggestions):
         json.dump(suggestions, f, indent=2)
 
 @bot.command()
+@bot.command()
 async def suggest(ctx, action=None, *, arg=None):
     """Submit or manage suggestions for the bot"""
     suggestions = load_suggestions()
@@ -526,18 +527,8 @@ async def suggest(ctx, action=None, *, arg=None):
         await ctx.send("Usage: !suggest <message> | !suggest view [keyword/user] | !suggest delete <index>")
         return
 
-    # ADD
-    if action.lower() not in ["view", "delete"]:
-                description=f"You're on cooldown. Try again in {remaining} seconds.",
-                color=discord.Color.orange()
-            )
-            await ctx.send(embed=embed)
-            return
-        cooldowns[user_id] = now
-
-    if action is None:
-        await ctx.send("Usage: `!suggest <idea>` or `!suggest view` or `!suggest delete <index>`")
-        return
+    # Rest of your command logic here...
+    # Make sure ALL code under this point is properly indented with 4 spaces
 
     action = action.lower()
 
