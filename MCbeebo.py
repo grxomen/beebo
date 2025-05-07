@@ -32,8 +32,6 @@ MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 cooldowns = {}  # Maps user_id to last suggestion timestamp
 DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 858462569043722271]  # Replace with your actual dev ID  # Replace with your actual dev ID
 COOLDOWN_SECONDS = 600
-global last_status
-last_status = "unknown"
 
 
 intents = discord.Intents.default()
@@ -58,18 +56,14 @@ async def on_ready():
     check_server_status.start()
 
 @tasks.loop(hours=3)
-
 async def check_server_status():
+    global last_status
     channel = bot.get_channel(CHANNEL_ID)
-    if channel is None:
-        print("Channel not found!")
-        return
-
     server = JavaServer.lookup(SERVER_ADDRESS)
 
     try:
         status = server.status()
-        if last_status != "online":
+        if last_status == "offline":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
             embed.add_field(name="Java IP", value="officialserv.aternos.me", inline=False)
             embed.add_field(name="Bedrock Port", value="64886", inline=False)
@@ -87,11 +81,11 @@ async def check_server_status():
             print("Server still online. No alert sent.")
     except Exception as e:
         print(f"Error checking server: {e}")
-        if last_status != "offline":
+        if last_status == "online":
             embed = discord.Embed(title="**Minecraft Server is OFFLINE or SLEEPING**", color=0xff5555)
             embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
-            await channel.send(content=ROLE_TO_TAG, embed=embed)
-            last_status = "offline"
+            await channel.send(content="<@&1368225900486721616>", embed=embed)
+        last_status = "offline"
 
 @bot.command(aliases=["status", "serverstatus"])
 async def mcstatus(ctx):
@@ -521,102 +515,35 @@ def save_suggestions(suggestions):
 @bot.command()
 async def suggest(ctx, action=None, *, arg=None):
     suggestions = load_suggestions()
-    now = time.time()  # Capture time once
-
-    # Cooldown check first
-    user_id = ctx.author.id
-    if user_id not in DEV_USER_ID:  # Only enforce cooldown for non-developers
-        last_time = cooldowns.get(user_id, 0)
-        if now - last_time < COOLDOWN_SECONDS:
-            remaining = int(COOLDOWN_SECONDS - (now - last_time))
-            embed = discord.Embed(
-                title="⏳ Slow down!",
-                description=f"You're on cooldown. Try again in **{remaining}** seconds.",
-                color=discord.Color.orange()
-            )
-            embed.set_footer(text="Only devs can bypass this.")
-            await ctx.send(embed=embed)
-            return
-        cooldowns[user_id] = now  # Update cooldown
 
     if action is None:
         await ctx.send("Usage: !suggest <message> | !suggest view [keyword/user] | !suggest delete <index>")
         return
 
-    if action.lower() == "view":
-        filtered = suggestions
-        if arg:
-            arg = arg.lower()
-            filtered = [s for s in suggestions if arg in s["message"].lower() or arg in s["user"].lower()]
-        if not filtered:
-            await ctx.send("No suggestions found.")
+if now - last_time < COOLDOWN_SECONDS:
+    remaining = int(COOLDOWN_SECONDS - (now - last_time))
+    embed = discord.Embed(
+        title="⏳ Slow down!",
+        description=f"You're on cooldown. Try again in **{remaining}** seconds.",
+        color=discord.Color.orange()
+    )
+    embed.set_footer(text="Only devs can bypass this.")
+    await ctx.send(embed=embed)
+    return
+
+   # ADD
+if action.lower() not in ["view", "delete"]:
+    now = time.time()
+    user_id = ctx.author.id
+
+    if user_id not in DEV_USER_ID:
+        last_time = cooldowns.get(user_id, 0)
+        if now - last_time < COOLDOWN_SECONDS:
+            remaining = int(COOLDOWN_SECONDS - (now - last_time))
+            await ctx.send(f"⏳ You're on cooldown! Try again in {remaining} seconds.")
             return
+        cooldowns[user_id] = now  # update only if cooldown was enforced
 
-        pages = []
-        for i in range(0, len(filtered), 5):
-            chunk = filtered[i:i+5]
-            embed = discord.Embed(
-                title="Suggestions",
-                description="Here are the current suggestions:",
-                color=discord.Color.blue()
-            )
-            for idx, s in enumerate(chunk, start=i + 1):
-                embed.add_field(name=f"{idx}. {s['user']}", value=s["message"], inline=False)
-            pages.append(embed)
-
-        current = 0
-        msg = await ctx.send(embed=pages[current])
-        await msg.add_reaction("⬅️")
-        await msg.add_reaction("➡️")
-
-        def check(reaction, user):
-            return user == ctx.author and str(reaction.emoji) in ["⬅️", "➡️"] and reaction.message.id == msg.id
-
-        while True:
-            try:
-                reaction, user = await bot.wait_for("reaction_add", timeout=60.0, check=check)
-                if str(reaction.emoji) == "➡️" and current < len(pages) - 1:
-                    current += 1
-                    await msg.edit(embed=pages[current])
-                elif str(reaction.emoji) == "⬅️" and current > 0:
-                    current -= 1
-                    await msg.edit(embed=pages[current])
-                await msg.remove_reaction(reaction, user)
-            except:
-                break
-        return
-
-    if action.lower() == "delete":
-        if ctx.author.id not in DEV_USER_ID:
-            embed = discord.Embed(
-                title="❌ Permission Denied",
-                description="Only devs can delete suggestions.",
-                color=discord.Color.red()
-            )
-            await ctx.send(embed=embed)
-            return
-
-        if not arg or not arg.isdigit():
-            await ctx.send("Usage: `!suggest delete <index>`")
-            return
-
-        index = int(arg) - 1
-        if index < 0 or index >= len(suggestions):
-            await ctx.send("Invalid suggestion index.")
-            return
-
-        removed = suggestions.pop(index)
-        save_suggestions(suggestions)
-
-        embed = discord.Embed(
-            title="🗑️ Suggestion Deleted",
-            description=f"**{removed['user']}**'s suggestion:\n{removed['message']}",
-            color=discord.Color.dark_red()
-        )
-        await ctx.send(embed=embed)
-        return
-
-    # If action is "add", we assume it's adding a new suggestion
     message = f"{action} {arg}" if arg else action
     suggestion = {
         "user": str(ctx.author),
@@ -633,6 +560,7 @@ async def suggest(ctx, action=None, *, arg=None):
 
     await ctx.send("✅ Suggestion received!")
     return
+
 
     # VIEW
     if action.lower() == "view":
@@ -683,7 +611,7 @@ async def suggest(ctx, action=None, *, arg=None):
         if ctx.author.id not in DEV_USER_ID:
             embed = discord.Embed(
                 title="❌ Permission Denied",
-                description="Only devs can delete suggestions.",
+                description="Only bot developers can delete suggestions.",
                 color=discord.Color.red()
             )
             await ctx.send(embed=embed)
