@@ -10,6 +10,7 @@ from discord.ui import Button, View
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from python_aternos import Client
+from exaroton import Exaroton
 from dotenv import load_dotenv
 from discord.ext.commands import cooldown, BucketType
 
@@ -24,12 +25,16 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 ROLE_TO_TAG = os.getenv("ROLE_TO_TAG")
 ATERNO_EMAIL = os.getenv("ATERNO_EMAIL")
 ATERNO_PASSWORD = os.getenv("ATERNO_PASSWORD")
+EXAROTON_EMAIL = os.getenv("EXAROTON_EMAIL")
+EXAROTON_PASSWORD = os.getenv("EXAROTON_PASSWORD")
+EXAROTON_TOKEN = os.getenv("EXAROTON_TOKEN")
+exaroton_client = Exaroton(EXAROTON_TOKEN)
 ANNOUNCEMENT_CHANNEL_ID = 1359974211367469147
 GUILD_ID = 1046624035464810496
 STATUS_CHANNEL_ID = 1369315007942230036
 DEV_LOG_CHANNEL_ID = 1369314903701065768
 SUGGESTIONS_FILE = "suggestions.json"
-MC_SERVER_PORT = int(os.getenv("MC_SERVER_PORT", 64886))
+MC_SERVER_PORT = int(os.getenv("MC_SERVER_PORT", 50430))
 MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 858462569043722271]
 COOLDOWN_SECONDS = 600
@@ -66,7 +71,7 @@ async def check_server_status():
         status = server.status()
         if last_status == "offline":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
-            embed.add_field(name="Java IP", value="officialserv.aternos.me", inline=False)
+            embed.add_field(name="Java IP", value="FWUCK.exaroton.me", inline=False)
             embed.add_field(name="Bedrock Port", value="64886", inline=False)
             embed.add_field(name="Console Join Code", value="eBhVrUWmUN_xVYo", inline=False)
             embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
@@ -75,7 +80,7 @@ async def check_server_status():
                 players = ', '.join([player.name for player in status.players.sample]) if status.players.sample else "Unknown players"
                 embed.add_field(name="Who's Online", value=players, inline=False)
 
-            embed.set_footer(text="Summon the squad before Aternos falls asleep.")
+            embed.set_footer(text="Summon the squad before Exaroton falls asleep.")
             await channel.send(content=ROLE_TO_TAG, embed=embed)
             last_status = "online"
         else:
@@ -105,7 +110,7 @@ async def mcstatus(ctx):
     except:
         embed = discord.Embed(title="**Minecraft Server Status**", color=0xff0000)
         embed.add_field(name="Status", value="OFFLINE or Sleeping", inline=True)
-        embed.set_footer(text="Reminder: Aternos servers need manual starting.")
+        embed.set_footer(text="Reminder: Tee Exaroton server need manual starting.")
         await ctx.send(embed=embed)
 
 @bot.command()
@@ -230,18 +235,18 @@ async def startserver(ctx):
 
     try:
         atclient = Client()
-        atclient.login(ATERNO_EMAIL, ATERNO_PASSWORD)
-        servers = atclient.list_servers()
+        atclient.login(EXAROTON_EMAIL, EXAROTON_PASSWORD)
+        servers = exaroton_client.get_servers()
 
         if not servers:
-            await ctx.send("No Aternos servers found for this account.")
+            await ctx.send("No Exaroton servers found for this account.")
             return
 
         myserver = servers[0]
         myserver.start()
 
-        embed = discord.Embed(title="Server Startup Initiated!", color=0x00ff00)
-        embed.add_field(name="Launching", value="Beebo has triggered Aternos startup.", inline=False)
+        embed = discord.Embed(title="Server Startup Initiated!", color=0xffd79f)
+        embed.add_field(name="Launching", value="Beebo has triggered Exaroton startup.", inline=False)
         embed.set_footer(text="Give it a minute. Queue times vary.")
         await ctx.send(embed=embed)
 
@@ -256,7 +261,7 @@ async def pingoffline(ctx):
         status = server.status()
         await ctx.send("The server is currently online — no need to ping the squad.")
     except:
-        embed = discord.Embed(title="**Heads Up! The Server Seems to Be Offline or Sleeping**", color=0xff0000)
+        embed = discord.Embed(title="**Heads Up! The Server Seems to Be Offline or Sleeping**", color=0xffd79f)
         embed.set_footer(text="Someone needs to hop in or start it manually.")
         await ctx.send(content="<@&1368225900486721616>", embed=embed)
 
@@ -553,7 +558,7 @@ async def help(ctx):
     embed = discord.Embed(title="Beebo Command List", color=0xb0c0ff)
     embed.add_field(name="!mcstatus / !status", value="Check if the Minecraft server is online and who's on.", inline=False)
     embed.add_field(name="!pingoffline / !offping", value="If the server is offline, alert the squad to start it.", inline=False)
-    embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Aternos (restricted to ☁️ �𝓿𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
+    embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Exaroton (restricted to ☁️ �𝓿𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
     embed.add_field(name="!say / !talk / !bcast", value="Send a custom message with an embed and ping MCSquad (restricted).", inline=False)
     embed.add_field(name="!suggest", value="Submit changes you'd like to see in 𝑩𝒆𝒆𝒃𝒐.", inline=False)
     embed.add_field(name="!cakecheck, !viveracheck, !jennacheck, etc.", value="Check specific users' status in a fun way.", inline=False)
