@@ -184,42 +184,29 @@ async def uptime(ctx):
 
 @bot.command(aliases=["emojiid", "stickerid", "getid", "se"])
 async def idcheck_command(ctx):
-    import re
     message = ctx.message
-    target_message = message
 
-    # Check for reply context
-    if message.reference:
-        try:
-            target_message = await ctx.channel.fetch_message(message.reference.message_id)
-        except Exception as e:
-            await ctx.send(f"⚠️ Couldn't fetch the replied message: `{e}`")
-            return
+    # Regex for custom emoji: <a:name:id> (animated) or <:name:id>
+    custom_emoji_pattern = r'<a?:([a-zA-Z0-9_]+):(\d+)>'
+    matches = re.findall(custom_emoji_pattern, message.content)
 
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
 
-    # Manual regex for custom emojis
-    emoji_matches = re.findall(r"<a?:\w+:(\d+)>", target_message.content)
-    if emoji_matches:
-        for em in emoji_matches:
-            embed.add_field(name="Emoji ID", value=f"`{em}`", inline=False)
+    if matches:
+        for name, emoji_id in matches:
+            embed.add_field(name=f"Emoji: {name}", value=f"ID: `{emoji_id}`", inline=False)
     else:
         embed.add_field(name="Emoji", value="No custom emojis found.", inline=False)
 
-    # Stickers
-    if target_message.stickers:
-        for sticker in target_message.stickers:
+    if message.stickers:
+        for sticker in message.stickers:
             embed.add_field(name=f"Sticker: {sticker.name}", value=f"ID: `{sticker.id}`", inline=False)
     else:
         embed.add_field(name="Sticker", value="No stickers found.", inline=False)
 
-    sent = await ctx.send(embed=embed)
-    await asyncio.sleep(10)
-    try:
-        await ctx.message.delete()
-        await sent.delete()
-    except discord.Forbidden:
-        pass
+    # Delete original message after 10 seconds
+    await ctx.send(embed=embed, delete_after=10)
+    await ctx.message.delete(delay=10)
 
 @bot.command(aliases=["ver", "commit"])
 async def version(ctx):
