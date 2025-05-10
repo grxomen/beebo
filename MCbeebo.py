@@ -184,29 +184,25 @@ async def uptime(ctx):
 
 @bot.command(aliases=["emojiid", "stickerid", "getid", "se"])
 async def idcheck_command(ctx):
+    import re
     message = ctx.message
     target_message = message
 
-    # If used as a reply, check the referenced message instead
+    # Check for reply context
     if message.reference:
         try:
             target_message = await ctx.channel.fetch_message(message.reference.message_id)
         except Exception as e:
-            await ctx.send(f"⚠️ Could not fetch replied message: {e}")
+            await ctx.send(f"⚠️ Couldn't fetch the replied message: `{e}`")
             return
 
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
 
-    # Custom emojis (colon format)
-    emojis = [e for e in target_message.content.split() if e.startswith("<:") or e.startswith("<a:")]
-    if emojis:
-        for emoji_str in emojis:
-            try:
-                parts = emoji_str.strip("<>").split(":")
-                name, emoji_id = parts[1], parts[2]
-                embed.add_field(name=f"Emoji: {name}", value=f"ID: `{emoji_id}`", inline=False)
-            except IndexError:
-                continue
+    # Manual regex for custom emojis
+    emoji_matches = re.findall(r"<a?:\w+:(\d+)>", target_message.content)
+    if emoji_matches:
+        for em in emoji_matches:
+            embed.add_field(name="Emoji ID", value=f"`{em}`", inline=False)
     else:
         embed.add_field(name="Emoji", value="No custom emojis found.", inline=False)
 
@@ -217,7 +213,6 @@ async def idcheck_command(ctx):
     else:
         embed.add_field(name="Sticker", value="No stickers found.", inline=False)
 
-    # Send embed and delete both messages after 10 seconds
     sent = await ctx.send(embed=embed)
     await asyncio.sleep(10)
     try:
