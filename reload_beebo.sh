@@ -1,10 +1,19 @@
 #!/bin/bash
 
-cd /root/beebo || exit 1
-git pull origin main || exit 1
+cd /root/beebo || exit
 
-# Wait 3 seconds to let Beebo send the Discord response
-sleep 3
+echo "📦 Checking for uncommitted changes..."
 
-sudo systemctl restart beebo || exit 1
+if [[ -n $(git status --porcelain) ]]; then
+  echo "📝 Uncommitted changes found. Committing as WIP..."
+  git add .
+  git commit -m "WIP: auto-commit before pull"
+else
+  echo "✅ Working tree clean."
+fi
 
+echo "🔄 Pulling latest code from GitHub..."
+git pull origin main
+
+echo "🚀 Restarting Beebo service..."
+systemctl restart beebo.service

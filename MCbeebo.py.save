@@ -1,0 +1,75 @@
+        return
+
+    # View suggestions
+    if action == "view":
+        filtered = suggestions
+        if arg:
+            arg = arg.lower()
+            filtered = [s for s in suggestions 
+                       if arg in s["message"].lower() or 
+                       arg in s["user"].lower()]
+
+        if not filtered:
+            await ctx.send("No suggestions found.")
+            return
+
+        # Pagination code here (same as before)
+        # ...
+
+<<<<<<< HEAD
+    # DELETE
+    if action.lower() == "delete":
+        if ctx.author.id not in DEV_USER_ID:
+            embed = discord.Embed(
+                title="❌ Permission Denied",
+                description="Only devs can delete suggestions.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
+=======
+    # Delete suggestion
+    if action == "delete":
+        if ctx.author.id not in DEV_USER_ID:
+            await ctx.send("🚫 Only devs can delete suggestions.")
+>>>>>>> 4fdfc4c22908a0c14aa94bd4d058e4572d9d7f3d
+            return
+
+        if not arg or not arg.isdigit():
+            await ctx.send("Usage: `!suggest delete <index>`")
+            return
+
+        index = int(arg) - 1
+        if 0 <= index < len(suggestions):
+            deleted = suggestions.pop(index)
+            save_suggestions(suggestions)
+            await ctx.send(f"🗑️ Deleted suggestion #{index + 1} by {deleted['user']}.")
+        else:
+            await ctx.send("Invalid suggestion index.")
+
+@bot.command()
+@commands.is_owner()  # Only you can run this
+async def testsuggest(ctx, attempts: int = 5):
+    """Test the spam protection in !suggest. Usage: !testsuggest [attempts]"""
+    cooldowns.clear()  # Reset cooldown tracker
+    test_msg = "Stress-testing suggestion system"
+    
+    for i in range(attempts):
+        # Simulate a !suggest command
+        fake_ctx = ctx
+        fake_ctx.message.content = f"!suggest {test_msg}"
+        await bot.process_commands(fake_ctx.message)
+        await ctx.send(f"Attempt {i+1}/{attempts} - Sent: `!suggest`")
+        await asyncio.sleep(0.5)  # Avoid rate limits
+    
+    await ctx.send(f"**Test complete.** Check cooldowns: `{cooldowns.get(ctx.author.id, 'None')}`")
+
+# --- Developer Command Logging ---
+@bot.listen('on_command')
+async def log_dev_commands(ctx):
+    if ctx.guild and ctx.guild.id == GUILD_ID:
+        log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(f"🛠️ Command `{ctx.command}` used by **{ctx.author}** in #{ctx.channel}")
+
+
+bot.run(TOKEN)
