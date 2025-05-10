@@ -181,7 +181,7 @@ async def uptime(ctx):
     )
     await ctx.send(embed=embed)
 
-@bot.command(aliases=["emojiid", "stickerid", "getid", "idcheck", "se"])
+@bot.command(aliases=["emojiid", "stickerid", "getid", "se"])
 async def idcheck_command(ctx):
     message = ctx.message
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
