@@ -176,13 +176,18 @@ async def uptime(ctx):
     )
     await ctx.send(embed=embed)
 
-@bot.command(name="id", aliases=["emojiid", "stickerid", "getid", "idcheck", "se"])
+@bot.command(aliases=["emojiid", "stickerid", "getid", "idcheck", "se"])
 async def idcheck(ctx):
-    # Check for custom emojis
-    custom_emojis = ctx.message.emojis  # returns a list of discord.Emoji
-    stickers = ctx.message.stickers     # list of discord.StickerItem
-
+    message = ctx.message
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
+
+    custom_emojis = message.emojis
+    stickers = message.stickers
+
+    # Debug logging
+    print(f"[DEBUG] Raw message content: {message.content}")
+    print(f"[DEBUG] Emojis found: {custom_emojis}")
+    print(f"[DEBUG] Stickers found: {stickers}")
 
     if custom_emojis:
         for emoji in custom_emojis:
