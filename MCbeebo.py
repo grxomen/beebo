@@ -176,7 +176,7 @@ async def uptime(ctx):
     )
     await ctx.send(embed=embed)
 
-@bot.command(aliases=["emojiid", "stickerid", "getid", "idcheck", "se"])
+@bot.command(name="id", aliases=["emojiid", "stickerid", "getid", "idcheck", "se"])
 async def idcheck(ctx):
     # Check for custom emojis
     custom_emojis = ctx.message.emojis  # returns a list of discord.Emoji
@@ -249,6 +249,75 @@ async def pingoffline(ctx):
         embed = discord.Embed(title="**Heads Up! The Server Seems to Be Offline or Sleeping**", color=0xff0000)
         embed.set_footer(text="Someone needs to hop in or start it manually.")
         await ctx.send(content="<@&1368225900486721616>", embed=embed)
+
+@bot.command(aliases=["commitgit", "gitcommit", "gc"])
+async def commitcode(ctx, *, msg: str = None):
+    if ctx.author.id not in DEV_USER_ID:
+        await ctx.send("🚫 You don't have permission to commit code.")
+        return
+
+    if not msg:
+        await ctx.send("❗ You need to include a commit message.\nUsage: `!commitcode <your message>`")
+        return
+
+    import subprocess
+
+    try:
+        # Stage all changes
+        subprocess.run(["git", "add", "."], check=True)
+
+        # Commit with message
+        subprocess.run(["git", "commit", "-m", msg], check=True)
+
+        embed = discord.Embed(
+            title="✅ Git Commit Successful",
+            description=f"Committed with message:\n```{msg}```",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
+
+    except subprocess.CalledProcessError as e:
+        await ctx.send(f"❌ Commit failed:\n```{e}```")
+
+@bot.command(aliases=["syncpush", "deploy"])
+async def pushcode(ctx, *, commit_msg="Updated from Beebo"):
+    if ctx.author.id not in DEV_USER_ID:
+        await ctx.send("🚫 You don't have permission to push code.")
+        return
+
+    import subprocess
+    try:
+        # Add all modified/unknown files
+        subprocess.run(["git", "add", "-A"], check=True)
+
+        # Commit changes
+        subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+
+        # Push to origin/main
+        subprocess.run(["git", "push", "origin", "main"], check=True)
+
+        embed = discord.Embed(
+            title="✅ Code Pushed Successfully",
+            description=f"Commit message: `{commit_msg}`",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
+
+    except subprocess.CalledProcessError as e:
+        embed = discord.Embed(
+            title="❌ Git Operation Failed",
+            description=f"```{e}```",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+
+    except Exception as e:
+        embed = discord.Embed(
+            title="❌ Unexpected Error",
+            description=f"```{str(e)}```",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
 
 @pingoffline.error
 async def pingoffline_error(ctx, error):
