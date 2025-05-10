@@ -107,6 +107,11 @@ async def mcstatus(ctx):
         embed.set_footer(text="Reminder: Aternos servers need manual starting.")
         await ctx.send(embed=embed)
 
+@bot.command()
+async def listcommands(ctx):
+    cmds = [cmd.name for cmd in bot.commands]
+    await ctx.send(f"Loaded commands: {', '.join(cmds)}")
+
 @bot.command(aliases=["set", "setty"])
 async def setserver(ctx, new_address: str):
     author_id = ctx.author.id
@@ -177,7 +182,7 @@ async def uptime(ctx):
     await ctx.send(embed=embed)
 
 @bot.command(aliases=["emojiid", "stickerid", "getid", "idcheck", "se"])
-async def idcheck(ctx):
+async def idcheck_command(ctx):
     message = ctx.message
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
 
