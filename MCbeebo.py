@@ -2,6 +2,7 @@ import os
 import discord
 import datetime
 import time
+import re
 import asyncio
 import random
 import json
@@ -186,27 +187,27 @@ async def idcheck_command(ctx):
     message = ctx.message
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
 
-    custom_emojis = message.emojis
+    # Stickers
     stickers = message.stickers
-
-    # Debug logging
-    print(f"[DEBUG] Raw message content: {message.content}")
-    print(f"[DEBUG] Emojis found: {custom_emojis}")
-    print(f"[DEBUG] Stickers found: {stickers}")
-
-    if custom_emojis:
-        for emoji in custom_emojis:
-            embed.add_field(name=f"Emoji: {emoji.name}", value=f"ID: `{emoji.id}`", inline=False)
-    else:
-        embed.add_field(name="Emoji", value="No custom emojis found.", inline=False)
-
     if stickers:
         for sticker in stickers:
             embed.add_field(name=f"Sticker: {sticker.name}", value=f"ID: `{sticker.id}`", inline=False)
     else:
         embed.add_field(name="Sticker", value="No stickers found.", inline=False)
 
-    await ctx.send(embed=embed)
+    # Try to find emoji ID manually from raw content
+    import re
+    matches = re.findall(r"<a?:\w+:(\d+)>", message.content)
+    if matches:
+        for emoji_id in matches:
+            embed.add_field(name="Custom Emoji", value=f"ID: `{emoji_id}`", inline=False)
+    else:
+        embed.add_field(name="Emoji", value="No custom emojis found.", inline=False)
+
+    reply = await ctx.send(embed=embed)
+    await ctx.message.delete()
+    await asyncio.sleep(10)
+    await reply.delete()
 
 @bot.command(aliases=["ver", "commit"])
 async def version(ctx):
