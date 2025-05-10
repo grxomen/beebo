@@ -185,29 +185,46 @@ async def uptime(ctx):
 @bot.command(aliases=["emojiid", "stickerid", "getid", "se"])
 async def idcheck_command(ctx):
     message = ctx.message
+    target_message = message
+
+    # If used as a reply, check the referenced message instead
+    if message.reference:
+        try:
+            target_message = await ctx.channel.fetch_message(message.reference.message_id)
+        except Exception as e:
+            await ctx.send(f"⚠️ Could not fetch replied message: {e}")
+            return
+
     embed = discord.Embed(title="🆔 ID Check", color=0xb0c0ff)
 
+    # Custom emojis (colon format)
+    emojis = [e for e in target_message.content.split() if e.startswith("<:") or e.startswith("<a:")]
+    if emojis:
+        for emoji_str in emojis:
+            try:
+                parts = emoji_str.strip("<>").split(":")
+                name, emoji_id = parts[1], parts[2]
+                embed.add_field(name=f"Emoji: {name}", value=f"ID: `{emoji_id}`", inline=False)
+            except IndexError:
+                continue
+    else:
+        embed.add_field(name="Emoji", value="No custom emojis found.", inline=False)
+
     # Stickers
-    stickers = message.stickers
-    if stickers:
-        for sticker in stickers:
+    if target_message.stickers:
+        for sticker in target_message.stickers:
             embed.add_field(name=f"Sticker: {sticker.name}", value=f"ID: `{sticker.id}`", inline=False)
     else:
         embed.add_field(name="Sticker", value="No stickers found.", inline=False)
 
-    # Try to find emoji ID manually from raw content
-    import re
-    matches = re.findall(r"<a?:\w+:(\d+)>", message.content)
-    if matches:
-        for emoji_id in matches:
-            embed.add_field(name="Custom Emoji", value=f"ID: `{emoji_id}`", inline=False)
-    else:
-        embed.add_field(name="Emoji", value="No custom emojis found.", inline=False)
-
-    reply = await ctx.send(embed=embed)
-    await ctx.message.delete()
+    # Send embed and delete both messages after 10 seconds
+    sent = await ctx.send(embed=embed)
     await asyncio.sleep(10)
-    await reply.delete()
+    try:
+        await ctx.message.delete()
+        await sent.delete()
+    except discord.Forbidden:
+        pass
 
 @bot.command(aliases=["ver", "commit"])
 async def version(ctx):
