@@ -903,6 +903,7 @@ async def refresh_sticky_message():
 
 @bot.event
 async def on_message(message):
+    print(f"Received message: {message.content}")
     if message.author.bot:
         return
 
