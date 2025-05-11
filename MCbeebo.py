@@ -40,7 +40,7 @@ DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 85846
 COOLDOWN_SECONDS = 600
 cooldowns = {}  # Maps user_id to last suggestion timestamp
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
 intents.members = True
@@ -742,6 +742,178 @@ async def suggest(ctx, action=None, *, arg=None):
             await ctx.send(f"🗑️ Deleted suggestion #{index + 1} by {deleted['user']}.")
         else:
             await ctx.send("Invalid suggestion index.")
+
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+versionfix_cooldown = 0  # Shared cooldown for version fix
+EXAROTON_TOKEN = os.getenv("EXAROTON_TOKEN")
+exaroton = Exaroton(EXAROTON_TOKEN)
+challenge_file = "data/challenges.json"
+if not os.path.exists("data"):
+    os.makedirs("data")
+if not os.path.exists(challenge_file):
+    with open(challenge_file, "w") as f:
+        json.dump({}, f)
+
+@bot.command()
+@commands.is_owner()
+async def reloadcog(ctx, name: str):
+    try:
+        await bot.reload_extension(f"cogs.{name}")
+        await ctx.send(f"✅ Reloaded cog: `{name}`")
+    except Exception as e:
+        await ctx.send(f"❌ Failed to reload: `{e}`")
+
+@bot.command()
+async def explayers(ctx):
+    try:
+        server = exaroton.get_servers()[0]
+        status = server.status()
+        players = status.players
+        if players:
+            await ctx.send(f"🟢 Players online: {', '.join(players)}")
+        else:
+            await ctx.send("⚫ No players online.")
+    except Exception as e:
+        await ctx.send(f"❌ Error: {e}")
+
+@bot.command()
+async def exlog(ctx):
+    try:
+        server = exaroton.get_servers()[0]
+        log = server.get_log()
+        with open("latest.log", "w") as f:
+            f.write(log)
+        await ctx.send(file=File("latest.log"))
+    except Exception as e:
+        await ctx.send(f"❌ Failed to fetch logs: {e}")
+
+@bot.group(invoke_without_command=True)
+async def challenge(ctx):
+    await ctx.send("Use `!challenge start <name>`, `!challenge submit <proof>`, or `!challenge leaderboard`.")
+
+@challenge.command(name="start")
+async def start_challenge(ctx, *, name: str):
+    with open(challenge_file, "r") as f:
+        data = json.load(f)
+    data[name] = []
+    with open(challenge_file, "w") as f:
+        json.dump(data, f, indent=2)
+    await ctx.send(f"✅ Challenge **{name}** started!")
+
+@challenge.command(name="submit")
+async def submit_challenge(ctx, *, proof: str):
+    with open(challenge_file, "r") as f:
+        data = json.load(f)
+    if not data:
+        await ctx.send("⚠️ No active challenges.")
+        return
+    latest = list(data.keys())[-1]
+    data[latest].append({
+        "user": str(ctx.author),
+        "proof": proof,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    })
+    with open(challenge_file, "w") as f:
+        json.dump(data, f, indent=2)
+    await ctx.send(f"✅ Submission added to **{latest}**!")
+
+@challenge.command(name="leaderboard")
+async def challenge_leaderboard(ctx):
+    with open(challenge_file, "r") as f:
+        data = json.load(f)
+    if not data:
+        await ctx.send("⚠️ No challenges found.")
+        return
+    latest = list(data.keys())[-1]
+    entries = data[latest]
+    leaderboard = {}
+    for entry in entries:
+        user = entry["user"]
+        leaderboard[user] = leaderboard.get(user, 0) + 1
+    sorted_lb = sorted(leaderboard.items(), key=lambda x: x[1], reverse=True)
+    desc = "\n".join([f"**{i+1}. {u}** — {c} entries" for i, (u, c) in enumerate(sorted_lb)])
+    embed = discord.Embed(title=f"🏆 {latest} Leaderboard", description=desc or "No entries yet.", color=0xffc300)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=["mcerror"])
+async def versionfix(ctx):
+    global versionfix_cooldown
+    now = time.time()
+    if now - versionfix_cooldown < 1800:
+        remaining = int(1800 - (now - versionfix_cooldown))
+        minutes, seconds = divmod(remaining, 60)
+        await ctx.send(f"⏳ That info was recently posted. Try again in `{minutes}m {seconds}s`.")
+        return
+
+    versionfix_cooldown = now
+    await send_versionfix_embed(ctx.channel)
+
+async def send_versionfix_embed(channel):
+    embed = discord.Embed(
+        title="⚠️ Minecraft Version Mismatch?",
+        description=(
+            "Seeing `Incompatible client version` or `Server mainly supports 1.20.1`?\n\n"
+            "**That means your game is too updated for the server.**\n"
+            "**We run Minecraft 1.20.X.** Not the latest.\n\n"
+            "**How to fix it:**\n"
+            "1. Open the Minecraft Launcher\n"
+            "2. Go to `Installations`\n"
+            "3. Create or select version `1.21.X`\n"
+            "4. Launch it and join!\n\n"
+            "_Need help?_ Use `!mcstatus` or ping a staff member."
+        ),
+        color=0xffc300
+    )
+    embed.set_footer(text="Sticky version info provided by 𝑩𝒆𝒆𝒃𝒐.")
+    await channel.send(embed=embed)
+
+@tasks.loop(hours=6)
+async def refresh_sticky_message():
+    channel = bot.get_channel(STICKY_CHANNEL_ID)
+    if not channel:
+        return
+
+    # Load previous message ID
+    last_id = None
+    if os.path.exists(STICKY_MESSAGE_ID_FILE):
+        with open(STICKY_MESSAGE_ID_FILE) as f:
+            data = json.load(f)
+            last_id = data.get("message_id")
+
+    # Delete old message
+    if last_id:
+        try:
+            old_msg = await channel.fetch_message(last_id)
+            await old_msg.delete()
+        except discord.NotFound:
+            pass
+
+    # Send new sticky embed
+    embed = discord.Embed(
+        title="🌍 How to Join the Minecraft Server",
+        description="Instructions for PC, Mobile, and Console users.",
+        color=0x57C7FF
+    )
+    embed.add_field(name="**🖥️ PC (Java Edition)**", value="`IP:` **FWUCK.exaroton.me**", inline=False)
+    embed.add_field(name="**📱 Bedrock/Mobile**", value="`IP:` **FWUCK.exaroton.me**\n`Port:` **50430**", inline=False)
+    embed.add_field(name="**🎮 Console**", value="Join Realm: `eBhVrUWmUN_xVYo`, then use **Join Server NPC**", inline=False)
+    embed.set_footer(text="Posted by 𝑩𝒆𝒆𝒃𝒐 • Updated regularly")
+
+    new_msg = await channel.send(embed=embed)
+    await new_msg.pin()
+
+@bot.listen("on_message")
+async def versionfix_auto_trigger(msg):
+    global versionfix_cooldown
+    if msg.author.bot:
+        return
+
+    keywords = ["too updated", "incompatible version", "server version", "can't join server"]
+    if any(kw in msg.content.lower() for kw in keywords):
+        now = time.time()
+        if now - versionfix_cooldown >= 1800:
+            versionfix_cooldown = now
+            await send_versionfix_embed(msg.channel)
 
 @bot.command()
 @commands.is_owner()  # Only you can run this
