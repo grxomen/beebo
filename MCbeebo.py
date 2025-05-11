@@ -743,7 +743,6 @@ async def suggest(ctx, action=None, *, arg=None):
         else:
             await ctx.send("Invalid suggestion index.")
 
-bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 versionfix_cooldown = 0  # Shared cooldown for version fix
 EXAROTON_TOKEN = os.getenv("EXAROTON_TOKEN")
 exaroton = Exaroton(EXAROTON_TOKEN)
