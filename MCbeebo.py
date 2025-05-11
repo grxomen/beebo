@@ -940,5 +940,9 @@ async def log_dev_commands(ctx):
         if log_channel:
             await log_channel.send(f"🛠️ Command `{ctx.command}` used by **{ctx.author}** in #{ctx.channel}")
 
+@bot.event
+async def on_message(message):
+    print(f"Received message: {message.content}")
+    await bot.process_commands(message)
 
 bot.run(TOKEN)
