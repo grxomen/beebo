@@ -901,18 +901,20 @@ async def refresh_sticky_message():
     new_msg = await channel.send(embed=embed)
     await new_msg.pin()
 
-@bot.listen("on_message")
-async def versionfix_auto_trigger(msg):
-    global versionfix_cooldown
-    if msg.author.bot:
+@bot.event
+async def on_message(message):
+    if message.author.bot:
         return
 
+    global versionfix_cooldown
     keywords = ["too updated", "incompatible version", "server version", "can't join server"]
-    if any(kw in msg.content.lower() for kw in keywords):
+    if any(kw in message.content.lower() for kw in keywords):
         now = time.time()
         if now - versionfix_cooldown >= 1800:
             versionfix_cooldown = now
-            await send_versionfix_embed(msg.channel)
+            await send_versionfix_embed(message.channel)
+
+    await bot.process_commands(message)
 
 @bot.command()
 @commands.is_owner()  # Only you can run this
@@ -941,7 +943,8 @@ async def log_dev_commands(ctx):
 
 @bot.event
 async def on_message(message):
-    print(f"Received message: {message.content}")
+    if message.author.bot:
+        return
     await bot.process_commands(message)
 
 bot.run(TOKEN)
