@@ -7,6 +7,7 @@ from playwright.async_api import async_playwright
 
 DATA_FILE = "data/exaroton_data.json"
 POOL_FILE = "data/exaroton_pool.json"
+donor_role_id = 1386101967297843270
 EXAROTON_TRUSTED = [448896936481652777, 546650815297880066, 858462569043722271]
 CHECK_INTERVAL_HOURS = 3
 
@@ -99,6 +100,8 @@ class ExarotonCog(commands.Cog):
 
     @commands.command()
     async def topup(self, ctx):
+        if donor_role_id not in [role.id for role in ctx.author.roles]:
+            await ctx.send("🚫 You don't have permission to access the donation panel.")
         code = self.credit_pool_code or load_data(POOL_FILE).get("pool")
         if not code:
             await ctx.send("❌ No credit pool link set.")
@@ -113,6 +116,26 @@ class ExarotonCog(commands.Cog):
         view = ServerControlView(code)
         await ctx.send(embed=embed, view=view)
 
+    @commands.command()
+    async def donate(self, ctx):
+        """Show donation embed if user has the proper role."""
+        if donor_role_id not in [role.id for role in ctx.author.roles]:
+            await ctx.send("🚫 You don't have permission to access the donation panel.")
+            return
+    
+        code = self.credit_pool_code or load_data(POOL_FILE).get("pool")
+        if not code:
+            await ctx.send("❌ No credit pool link set.")
+            return
+    
+        embed = discord.Embed(
+            title="💸 Donate Server Credits",
+            description="Thank you for supporting the server! Use the button below to add credits directly.",
+            color=0x462f80
+        )
+        embed.set_footer(text="Credits go into uptime & more RAM for all of us 😌")
+        view = ServerControlView(code)
+        await ctx.send(embed=embed, view=view)
 
     @commands.command(name="help_exaroton", aliases=["exahelp"])
     async def help_exaroton(self, ctx):
