@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 import json
+import time
 import os
 from playwright.async_api import async_playwright
 
@@ -36,6 +37,22 @@ class ServerControlView(discord.ui.View):
             disabled=True
         ))
 
+
+DONORBOARD_COOLDOWN_SECONDS = 300  # 5 minutes
+last_donorboard_time = 0
+DEV_USER_IDS = [448896936481652777, 546650815297880066, 858462569043722271]
+
+class DonateButton(discord.ui.View):
+    def __init__(self, pool_code):
+        super().__init__()
+        if pool_code:
+            self.add_item(discord.ui.Button(
+                label="💸 Donate Credits",
+                url=f"https://exaroton.com/credits/#{pool_code}",
+                style=discord.ButtonStyle.link
+            ))
+
+    
 class ExarotonCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -103,10 +120,71 @@ class ExarotonCog(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def setcredits(self, ctx, amount: float):
-        self.credit_balance = float(amount)
-        save_data(DATA_FILE, {"balance": self.credit_balance})
-        await ctx.send(f"✅ Credit balance set to **{amount}** credits.")
+    async def setcredits(self, ctx, amount: float, member: discord.Member = None):
+        user = member or ctx.author
+        user_id = str(user.id)
+    
+        # Update credit balance (you can customize whether this affects server logic or is just for stats)
+        self.credit_balance = float(amount) if user == ctx.author else self.credit_balance
+    
+        # Update personal donation record
+        donations = load_data("data/exaroton_donations.json")
+        donations[user_id] = donations.get(user_id, 0) + amount
+        save_data("data/exaroton_donations.json", donations)
+    
+        await ctx.send(f"✅ Set **{amount} credits** for {user.mention}.")
+    
+        # Optionally: show leaderboard position
+        leaderboard = sorted(donations.items(), key=lambda x: x[1], reverse=True)
+        position = [uid for uid, _ in leaderboard].index(user_id) + 1
+        await ctx.send(f"🏆 {user.display_name} is now **#{position}** on the donor leaderboard!")
+
+
+    @commands.command(name="dboard", aliases=["donors"])
+    async def donorboard(self, ctx, top: int = 5):
+        global last_donorboard_time
+        now = time.time()
+        is_dev = ctx.author.id in DEV_USER_IDS
+    
+        if not is_dev and now - last_donorboard_time < DONORBOARD_COOLDOWN_SECONDS:
+            remaining = int(DONORBOARD_COOLDOWN_SECONDS - (now - last_donorboard_time))
+            embed = discord.Embed(
+                title="⏳ Slow down there!",
+                description=f"`!donorboard` is on cooldown for **{remaining}** more seconds.",
+                color=0xffaa00
+            )
+            embed.set_footer(text="Try again later.")
+            await ctx.send(embed=embed)
+            return
+    
+        last_donorboard_time = now
+    
+        donations = load_data("data/exaroton_donations.json")
+        if not donations:
+            await ctx.send("📭 No donation data yet!")
+            return
+    
+        leaderboard = sorted(donations.items(), key=lambda x: x[1], reverse=True)
+        embed = discord.Embed(
+            title="🏆 Top Server Donors",
+            description="Most generous credit contributors ❤️",
+            color=0x462f80
+        )
+    
+        for i, (user_id, total) in enumerate(leaderboard[:top], start=1):
+            user = self.bot.get_user(int(user_id)) or f"<@{user_id}>"
+            name = user.display_name if hasattr(user, 'display_name') else str(user)
+            embed.add_field(
+                name=f"{i}. {name}",
+                value=f"💰 {total:.2f} credits",
+                inline=False
+            )
+    
+        if is_dev:
+            embed.set_footer(text="<:pixelGUY:1368269152334123049> Dev bypass")
+    
+        view = DonateButton(self.credit_pool_code)
+        await ctx.send(embed=embed, view=view)
 
     @commands.command(name="credits", aliases=["creds"])
     async def credits(self, ctx):
@@ -151,21 +229,49 @@ class ExarotonCog(commands.Cog):
 
     @commands.command()
     async def topup(self, ctx):
-        if donor_role_id not in [role.id for role in ctx.author.roles]:
-            await ctx.send("🚫 You don't have permission to access the donation panel.")
+        user_id = ctx.author.id
         code = self.credit_pool_code or load_data(POOL_FILE).get("pool")
         if not code:
             await ctx.send("❌ No credit pool link set.")
             return
-
-        embed = discord.Embed(
-            title="💳 Top Up Server Credits",
-            description="Help keep the server running! Use the button below to donate credits.",
-            color=0x462f80
-        )
-        embed.set_footer(text="Donations go directly into server uptime.")
-        view = ServerControlView(code)
-        await ctx.send(embed=embed, view=view)
+    
+        # ─── Dev Bypass ─────────────────────────────
+        if user_id == 546650815297880066:
+            embed = discord.Embed(
+                title="💳 Top Up Server Credits",
+                description="Help keep the server running! Use the button below to donate credits.",
+                color=0x462f80
+            )
+            embed.set_footer(text="<:pixel_cake:1368264542064345108> Dev bypass")
+            view = ServerControlView(code)
+            await ctx.send(embed=embed, view=view)
+            return
+    
+        elif user_id == 858462569043722271:
+            embed = discord.Embed(
+                title="💳 Top Up Server Credits",
+                description="Help keep the server running! Use the button below to donate credits.",
+                color=0x462f80
+            )
+            embed.set_footer(text="<:pixel_toast:1386118938714177649> Dev bypass")
+            view = ServerControlView(code)
+            await ctx.send(embed=embed, view=view)
+            return
+    
+        # ─── Donor Role Check ───────────────────────
+        if donor_role_id in [role.id for role in ctx.author.roles]:
+            embed = discord.Embed(
+                title="💳 Top Up Server Credits",
+                description="Help keep the server running! Use the button below to donate credits.",
+                color=0x462f80
+            )
+            embed.set_footer(text="Donations go directly into server uptime.")
+            view = ServerControlView(code)
+            await ctx.send(embed=embed, view=view)
+            return
+    
+        # ─── Public Block ────────────────────────────
+        await ctx.send("🚫 You don't have permission to access the donation panel.")
 
     @commands.command()
     async def donate(self, ctx):
