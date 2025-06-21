@@ -44,7 +44,7 @@ class ChallongeCog(commands.Cog):
                 except:
                     return {"error": "Invalid response"}, resp.status
 
-    @commands.command()
+    @commands.command(aliases=["mh"])
     async def match_history(self, ctx, slug: str, member: discord.Member = None):
         uid = str((member or ctx.author).id)
         history = load_json(MATCH_HISTORY_FILE).get(slug, {}).get(uid, [])
@@ -107,7 +107,7 @@ class ChallongeCog(commands.Cog):
         })
         save_json(MATCH_HISTORY_FILE, history)
 
-    @commands.command()
+    @commands.command(aliases=["sm"])
     async def sync_matches(self, ctx, slug: str):
         await self.alert_matches(ctx.guild, slug)
         await ctx.send(f"✅ Match alerts manually synced for `{slug}`.")
@@ -245,7 +245,7 @@ class ChallongeCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=["dumppl"])
     @commands.is_owner()
     async def dump_participants(self, ctx, slug: str):
         """Dump participant names and their Challonge IDs from a tournament."""
@@ -332,7 +332,7 @@ class ChallongeCog(commands.Cog):
 
         await ctx.send(f"📝 Match report submitted for review. Awaiting dev confirmation. <:beebo_:1383281762385531081>")
 
-    @commands.command()
+    @commands.command(aliases=["cr"])
     @commands.is_owner()
     async def confirm_report(self, ctx, slug: str, match_id: int):
         reports = load_json("data/pending_reports.json")
@@ -365,7 +365,7 @@ class ChallongeCog(commands.Cog):
         else:
             await ctx.send("❌ Failed to finalize match via Challonge API.")
 
-    @commands.command()
+    @commands.command(aliases=["dr"])
     @commands.is_owner()
     async def deny_report(self, ctx, slug: str, match_id: int):
         reports = load_json("data/pending_reports.json")
@@ -388,7 +388,7 @@ class ChallongeCog(commands.Cog):
         await ctx.send(f"🚫 <@{reporter_id}>, your match report for `{slug}` match `{match_id}` was **denied** by the tournament overlords. Try again or appeal with better vibes. <:beebo_:1383281762385531081>")
 
 
-    @commands.command()
+    @commands.command(aliases=["confres"])
     @commands.is_owner()
     async def confirm_result(self, ctx, slug: str, match_id: int, score: str, loser: discord.Member):
         """Dev-only: Immediately confirm and push a match result."""
@@ -427,7 +427,7 @@ class ChallongeCog(commands.Cog):
         else:
             await ctx.send(f"❌ Failed to confirm result: {data.get('errors') or data}")
 
-    @commands.command(aliases=["ctourney", "newtourney"])
+    @commands.command(aliases=["ctour", "newtour"])
     @commands.is_owner()
     async def create_tourney(self, ctx, slug: str, *, name: str):
         """Create a new tournament on Challonge."""
