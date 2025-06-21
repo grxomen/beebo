@@ -47,32 +47,59 @@ class ExarotonCog(commands.Cog):
         self.last_status = "offline"
         self.check_server_status.start()
 
-    @tasks.loop(hours=CHECK_INTERVAL_HOURS)
+ @tasks.loop(hours=CHECK_INTERVAL_HOURS)
     async def check_server_status(self):
         channel = self.bot.get_channel(self.channel_id)
         server = JavaServer.lookup(self.server_address)
+    
         try:
             status = server.status()
+    
+            # ─── Server Just Came Online ─────────────────────────
             if self.last_status == "offline":
                 embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0x462f80)
                 embed.add_field(name="Java IP", value=self.server_address, inline=False)
-                embed.add_field(name="Bedrock Port", value="64886", inline=False)
                 embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
+    
                 if status.players.online > 0:
                     players = ', '.join([p.name for p in status.players.sample]) if status.players.sample else "Unknown players"
                     embed.add_field(name="Who's Online", value=players, inline=False)
+    
                 embed.set_footer(text="Summon the squad before Exaroton falls asleep.")
                 await channel.send(content=self.role_to_tag, embed=embed)
                 self.last_status = "online"
+    
+                # ─── Burn Warning Embed ─────────────────────────────
+                if self.credit_balance <= 1030.8:  # Adjust threshold if needed
+                    try:
+                        warn_embed = discord.Embed(
+                            title="⚠️ Low Server Credits!",
+                            description=f"Current balance: **{self.credit_balance} credits**\nTop up soon to avoid downtime.",
+                            color=0xffaa00
+                        )
+                        hours_left = round(self.credit_balance / 10, 1)
+                        warn_embed.add_field(name="Burn Estimate", value=f"~{hours_left}h left @ 10GB RAM", inline=False)
+                        warn_embed.set_footer(text="Use !topup to donate credits.")
+                        view = ServerControlView(self.credit_pool_code)
+                        await channel.send(embed=warn_embed, view=view)
+                    except Exception as e:
+                        print(f"[⚠️ Burn Warning Error] {e}")
+    
             else:
-                print("Server still online. No alert sent.")
-        except:
-            print("Server is offline or unreachable.")
+                print("[Status Check] Server still online, no alert sent.")
+    
+        except Exception as e:
+            print(f"[🔻 Server Down Check] {e}")
             if self.last_status == "online":
-                embed = discord.Embed(title="**Minecraft Server is OFFLINE or SLEEPING**", color=0xff5555)
+                embed = discord.Embed(
+                    title="**Minecraft Server is OFFLINE or SLEEPING**",
+                    color=0xff5555
+                )
                 embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
                 await channel.send(content=self.role_to_tag, embed=embed)
             self.last_status = "offline"
+
+
 
     @commands.command()
     @commands.is_owner()
@@ -87,17 +114,33 @@ class ExarotonCog(commands.Cog):
 
     @commands.command()
     async def burn(self, ctx, hours: float = 1, ram: int = 10):
-        rate_per_gb_hour = 1.0  # Can adjust later if Exaroton changes pricing
-        estimated = round(rate_per_gb_hour * ram * hours, 2)
+        rate_per_gb_hour = 1.0  # Exaroton's current rate
+        session_burn = round(rate_per_gb_hour * ram * hours, 2)
+        daily_burn = round(rate_per_gb_hour * ram * 24, 2)
+        weekly_burn = round(daily_burn * 7, 2)
+    
+        # Estimate runtime left based on current credit balance
+        if ram > 0:
+            hours_left = self.credit_balance / (rate_per_gb_hour * ram)
+            days_left = hours_left / 24
+            lifespan = f"<:beebo:1383282292478312519> Estimated uptime left: **{hours_left:.1f}h** (~{days_left:.1f} days)"
+        else:
+            lifespan = "⚠️ Invalid RAM config for burn estimate."
     
         embed = discord.Embed(
-            title="🔥 Credit Burn Estimate",
-            description=f"Running a server for **{hours}h** at **{ram}GB RAM** will burn approximately:",
+            title="🔥 Exaroton Burn Estimate",
+            description=f"Using **{ram}GB RAM**...",
             color=0x462f80
         )
-        embed.add_field(name="Estimated Burn", value=f"💸 **{estimated} credits**", inline=False)
-        embed.set_footer(text="Based on Exaroton's rate of ~1 credit/GB/hr.")
+        embed.add_field(name=f"Per {hours}h session", value=f"💸 **{session_burn} credits**", inline=False)
+        embed.add_field(name="Per 24h/day (1 day)", value=f"🕒 **{daily_burn} credits**", inline=False)
+        embed.add_field(name="Per 7d/week", value=f"📅 **{weekly_burn} credits**", inline=False)
+        embed.add_field(name="Lifespan at current balance", value=lifespan, inline=False)
+        embed.set_footer(text="Estimates assume 1 credit/GB/hour.")
+    
         await ctx.send(embed=embed)
+
+
 
     @commands.command()
     @commands.is_owner()
