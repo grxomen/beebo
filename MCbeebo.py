@@ -83,8 +83,8 @@ async def check_server_status():
         status = server.status()
         if last_status == "offline":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
-            embed.add_field(name="Java IP", value="FWUCK.exaroton.me", inline=False)
-            embed.add_field(name="Bedrock Port", value="64886", inline=False)
+            embed.add_field(name="Java IP", value="termite.exaroton.me", inline=False)
+            embed.add_field(name="Bedrock Port", value="14663", inline=False)
             embed.add_field(name="Console Join Code", value="eBhVrUWmUN_xVYo", inline=False)
             embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
 
@@ -92,7 +92,7 @@ async def check_server_status():
                 players = ', '.join([player.name for player in status.players.sample]) if status.players.sample else "Unknown players"
                 embed.add_field(name="Who's Online", value=players, inline=False)
 
-            embed.set_footer(text="Summon the squad before Exaroton falls asleep.")
+            embed.set_footer(text="Summon the squad before Termite falls asleep.")
             await channel.send(content=ROLE_TO_TAG, embed=embed)
             last_status = "online"
         else:
@@ -100,7 +100,7 @@ async def check_server_status():
     except:
         print("Server is offline or unreachable.")
         if last_status == "online":
-            embed = discord.Embed(title="**Minecraft Server is OFFLINE or SLEEPING**", color=0xff5555)
+            embed = discord.Embed(title="**Termite is OFFLINE or SLEEPING**", color=0xff5555)
             embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
             await channel.send(content="<@&1368225900486721616>", embed=embed)
         last_status = "offline"
@@ -120,9 +120,9 @@ async def mcstatus(ctx):
 
         await ctx.send(embed=embed)
     except:
-        embed = discord.Embed(title="**Minecraft Server Status**", color=0xff0000)
+        embed = discord.Embed(title="**Termite Server Status**", color=0xff0000)
         embed.add_field(name="Status", value="OFFLINE or Sleeping", inline=True)
-        embed.set_footer(text="Reminder: Tee Exaroton server need manual starting.")
+        embed.set_footer(text="Reminder: Termite server needs manual starting.")
         await ctx.send(embed=embed)
 
 @bot.command()
@@ -258,7 +258,7 @@ async def startserver(ctx):
         myserver.start()
 
         embed = discord.Embed(title="Server Startup Initiated!", color=0xffd79f)
-        embed.add_field(name="Launching", value="Beebo has triggered Exaroton startup.", inline=False)
+        embed.add_field(name="Launching", value="Beebo has triggered Termite startup.", inline=False)
         embed.set_footer(text="Give it a minute. Queue times vary.")
         await ctx.send(embed=embed)
 
@@ -271,7 +271,7 @@ async def pingoffline(ctx):
     server = JavaServer.lookup(SERVER_ADDRESS)
     try:
         status = server.status()
-        await ctx.send("The server is currently online — no need to ping the squad.")
+        await ctx.send("Termite is currently online — no need to ping the squad.")
     except:
         embed = discord.Embed(title="**Heads Up! The Server Seems to Be Offline or Sleeping**", color=0xffd79f)
         embed.set_footer(text="Someone needs to hop in or start it manually.")
@@ -1075,8 +1075,8 @@ async def refresh_sticky_message():
         description="Instructions for PC, Mobile, and Console users.",
         color=0x57C7FF
     )
-    embed.add_field(name="**🖥️ PC (Java Edition)**", value="`IP:` **FWUCK.exaroton.me**", inline=False)
-    embed.add_field(name="**📱 Bedrock/Mobile**", value="`IP:` **FWUCK.exaroton.me**\n`Port:` **50430**", inline=False)
+    embed.add_field(name="**🖥️ PC (Java Edition)**", value="`IP:` **termite.exaroton.me**", inline=False)
+    embed.add_field(name="**📱 Bedrock/Mobile**", value="`IP:` **termite.exaroton.me**\n`Port:` **14663**", inline=False)
     embed.add_field(name="**🎮 Console**", value="Join Realm: `eBhVrUWmUN_xVYo`, then use **Join Server NPC**", inline=False)
     embed.set_footer(text="Posted by 𝑩𝒆𝒆𝒃𝒐 • Updated regularly")
 
