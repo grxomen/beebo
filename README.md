@@ -15,10 +15,10 @@
   Use `!mcstatus` in Discord to check player count, online status, and who's currently connected.
 
 - 🚀 **Remote Server Start via Discord**  
-  Use `!startserver` to remotely boot your Aternos server using secure credentials.
+  Use `!startserver` to remotely boot your Exaroton server using secure credentials.
 
 - 🔐 **.env-Based Credential Storage**  
-  Your Aternos login and bot token stay out of the codebase and safe.
+  Your Exaroton login and bot token stay out of the codebase and safe.
 
 - 🎨 **Minimal, Beautiful Embeds**  
   No spammy blocks of text—just slick, readable updates in purple/gold cyberstyle.
@@ -30,7 +30,7 @@
 - Python 3.9+
 - `discord.py`
 - `mcstatus`
-- `aternos-api` (unofficial)
+- `exaroton-api` (unofficial)
 - `python-dotenv`
 
 ---
