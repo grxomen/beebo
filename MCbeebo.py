@@ -84,7 +84,6 @@ async def check_server_status():
         if last_status == "offline":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
             embed.add_field(name="Java IP", value="termite.exaroton.me", inline=False)
-            embed.add_field(name="Bedrock Port", value="14663", inline=False)
             embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
 
             if status.players.online > 0:
