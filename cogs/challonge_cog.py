@@ -471,6 +471,38 @@ class ChallongeCog(commands.Cog):
         await ctx.send(f"<:beebo:1383282292478312519> **Matches found in `{slug}`:**\n{msg}")
 
 
+    @commands.command(aliases=["pb", "purge"])
+    @commands.is_owner()
+    async def purgebot(self, ctx, limit: int = 50, *, keyword: str = None):
+        """
+        Delete Beebo's messages and your own command triggers (within limit).
+        Optional: filter by keyword.
+        Usage: !purgebot 50
+               !purgebot 100 matches ready
+        """
+        def check(m):
+            # Bot message OR your own command message
+            is_beebo_or_trigger = (
+                m.author == ctx.bot.user or
+                (m.author == ctx.author and m.content.startswith(ctx.prefix))
+            )
+            
+            # Optional keyword filter (in content or embed text)
+            if keyword:
+                in_content = keyword.lower() in m.content.lower()
+                in_embed = any(
+                    keyword.lower() in (e.description or "").lower()
+                    or any(keyword.lower() in (f.value or "") for f in e.fields)
+                    for e in m.embeds
+                ) if m.embeds else False
+                return is_beebo_or_trigger and (in_content or in_embed)
+    
+            return is_beebo_or_trigger
+    
+        deleted = await ctx.channel.purge(limit=limit, check=check)
+        await ctx.send(f"🧽 Deleted {len(deleted)} bot/trigger messages.", delete_after=3)
+
+    
     @commands.command(aliases=["tourneyhelp", "tourhelp", "thelp"])
     async def help_tourney(self, ctx):
         embed = discord.Embed(
