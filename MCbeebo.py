@@ -818,9 +818,26 @@ async def suggest(ctx, action=None, *, arg=None):
         # Log to dev channel
         log_channel = bot.get_channel(DEV_LOG_CHANNEL_ID)
         if log_channel:
-            await log_channel.send(f"💡 New suggestion from {ctx.author}:\n{message}")
+            embed = discord.Embed(
+                title="💡 New Suggestion Submitted",
+                color=discord.Color.blurple()
+            )
+            embed.add_field(name="User", value=f"{ctx.author} ({ctx.author.mention})", inline=False)
+            embed.add_field(name="User ID", value=f"{ctx.author.id}", inline=False)
+            embed.add_field(name="Channel", value=f"{ctx.channel.mention}", inline=False)
+            embed.add_field(name="Suggestion", value=message, inline=False)
+            embed.add_field(name="Submitted At", value=f"<t:{int(now)}:F>", inline=False)
+            embed.set_footer(text="Beebo Suggestion System", icon_url=ctx.author.display_avatar.url)
+            await log_channel.send(embed=embed)
 
-        await ctx.send("✅ Suggestion received!")
+
+        confirmation = discord.Embed(
+            title="✅ Suggestion Received",
+            description="Thanks for your input! Your suggestion has been logged.",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=confirmation)
+
         return
 
     # View suggestions
