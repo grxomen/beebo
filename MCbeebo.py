@@ -85,7 +85,6 @@ async def check_server_status():
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
             embed.add_field(name="Java IP", value="termite.exaroton.me", inline=False)
             embed.add_field(name="Bedrock Port", value="14663", inline=False)
-            embed.add_field(name="Console Join Code", value="eBhVrUWmUN_xVYo", inline=False)
             embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
 
             if status.players.online > 0:
@@ -1072,12 +1071,10 @@ async def refresh_sticky_message():
     # Send new sticky embed
     embed = discord.Embed(
         title="🌍 How to Join the Minecraft Server",
-        description="Instructions for PC, Mobile, and Console users.",
+        description="Instructions for JAVA users.",
         color=0x57C7FF
     )
-    embed.add_field(name="**🖥️ PC (Java Edition)**", value="`IP:` **termite.exaroton.me**", inline=False)
-    embed.add_field(name="**📱 Bedrock/Mobile**", value="`IP:` **termite.exaroton.me**\n`Port:` **14663**", inline=False)
-    embed.add_field(name="**🎮 Console**", value="Join Realm: `eBhVrUWmUN_xVYo`, then use **Join Server NPC**", inline=False)
+    embed.add_field(name="**🖥️ PC (Java Edition)**", value="`IP:` **termite.exaroton.me**\n`Port:` **14663**", inline=False)
     embed.set_footer(text="Posted by 𝑩𝒆𝒆𝒃𝒐 • Updated regularly")
 
     new_msg = await channel.send(embed=embed)
