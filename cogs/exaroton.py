@@ -7,7 +7,7 @@ from playwright.async_api import async_playwright
 
 DATA_FILE = "data/exaroton_data.json"
 POOL_FILE = "data/exaroton_pool.json"
-EXAROTON_TRUSTED = [546650815297880066, 858462569043722271]
+EXAROTON_TRUSTED = [448896936481652777, 546650815297880066, 858462569043722271]
 CHECK_INTERVAL_HOURS = 3
 
 def load_data(filename):
