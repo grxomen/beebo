@@ -87,9 +87,17 @@ class ExarotonCog(commands.Cog):
 
     @commands.command()
     async def burn(self, ctx, hours: float = 1, ram: int = 10):
-        rate = ram
-        estimated = rate * hours
-        await ctx.send(f"🔥 Estimated burn for **{hours}h** at **{ram}GB RAM**: **{estimated} credits**")
+        rate_per_gb_hour = 1.0  # Can adjust later if Exaroton changes pricing
+        estimated = round(rate_per_gb_hour * ram * hours, 2)
+    
+        embed = discord.Embed(
+            title="🔥 Credit Burn Estimate",
+            description=f"Running a server for **{hours}h** at **{ram}GB RAM** will burn approximately:",
+            color=0x462f80
+        )
+        embed.add_field(name="Estimated Burn", value=f"💸 **{estimated} credits**", inline=False)
+        embed.set_footer(text="Based on Exaroton's rate of ~1 credit/GB/hr.")
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.is_owner()
