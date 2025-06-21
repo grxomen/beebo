@@ -524,6 +524,56 @@ async def say(ctx, channel_input=None, *, message: str = None):
         await ctx.send("💥 Failed to send the message.")
         logging.exception(f"Error sending message to {target_channel.id}: {e}")
 
+@bot.command(aliases=["sp", "chat"])
+async def speak(ctx, channel_input=None, *, message: str = None):
+    if 1366796508288127066 not in [role.id for role in ctx.author.roles]:
+        await ctx.send("🚫 You don't have permission to use this command.")
+        return
+
+    # Handle empty call
+    if not channel_input and not message:
+        await ctx.send("❗ You must provide a message.")
+        return
+
+    # Try to resolve channel from input
+    target_channel = None
+    if channel_input:
+        channel_id = None
+        if channel_input.startswith("<#") and channel_input.endswith(">"):
+            channel_id = int(channel_input[2:-1])
+        elif channel_input.isdigit():
+            channel_id = int(channel_input)
+        else:
+            # Try name match
+            matched = [c for c in ctx.guild.text_channels if c.name.lower() == channel_input.lower()]
+            if matched:
+                target_channel = matched[0]
+
+        if channel_id:
+            target_channel = bot.get_channel(channel_id)
+
+        # If we *couldn't* resolve the channel, treat it as message text
+        if not target_channel:
+            message = f"{channel_input} {message or ''}".strip()
+            target_channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    else:
+        target_channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+
+    # Final check
+    if not message:
+        await ctx.send("❗ You must provide a message to send.")
+        return
+
+    try:
+        embed = discord.Embed(description=message, color=0xb0c0ff)
+        await target_channel.send(content="", embed=embed)
+        await ctx.send(f"✅ Message sent to {target_channel.mention}")
+    except discord.Forbidden:
+        await ctx.send("🚫 Bot lacks permission to send messages in that channel.")
+    except Exception as e:
+        await ctx.send("💥 Failed to send the message.")
+        logging.exception(f"Error sending message to {target_channel.id}: {e}")
+
 
 
 @bot.command(aliases=["rle"])
