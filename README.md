@@ -1,8 +1,8 @@
 # 🤖 Beebo
 
-> A serious Discord bot for starting, watching, and worshipping your Aternos Minecraft server.
+> A serious Discord bot for starting, watching, and worshipping your Exaroton Minecraft server.
 
-**Beebo** is a sleek, focused bot built to remotely control and monitor a Minecraft server hosted on Aternos. With automatic status checks, rich status embeds, and secure command-based startup, Beebo is perfect for private communities or server admins who don’t want to rely on flaky browser sessions.
+**Beebo** is a sleek, focused bot built to remotely control and monitor a Minecraft server hosted on Exaroton. With automatic status checks, rich status embeds, and secure command-based startup, Beebo is perfect for private communities or server admins who don’t want to rely on flaky browser sessions.
 
 ---
 
