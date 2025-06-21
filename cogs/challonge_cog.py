@@ -245,25 +245,6 @@ class ChallongeCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(aliases=["ctourney", "newtourney"])
-    @commands.is_owner()
-    async def create_tourney(self, ctx, slug: str, *, name: str):
-        """Create a new tournament on Challonge."""
-        payload = {
-            "tournament": {
-                "name": name,
-                "url": slug,
-                "tournament_type": "single elimination",  # can also be "double elimination", etc.
-                "open_signup": False
-            }
-        }
-
-        data, status = await self.request("POST", "tournaments", json=payload)
-        if status == 200:
-            await ctx.send(f"✅ Tournament **{name}** created with slug `{slug}`.\nLink: https://challonge.com/{slug}")
-        else:
-            await ctx.send(f"❌ Failed to create tournament: {data.get('errors') or data}")
-
     @commands.command()
     @commands.is_owner()
     async def dump_participants(self, ctx, slug: str):
@@ -445,6 +426,26 @@ class ChallongeCog(commands.Cog):
             await ctx.send(embed=embed)
         else:
             await ctx.send(f"❌ Failed to confirm result: {data.get('errors') or data}")
+
+    @commands.command(aliases=["ctourney", "newtourney"])
+    @commands.is_owner()
+    async def create_tourney(self, ctx, slug: str, *, name: str):
+        """Create a new tournament on Challonge."""
+        payload = {
+            "tournament": {
+                "name": name,
+                "url": slug,
+                "tournament_type": "single elimination",  # can also be "double elimination", etc.
+                "open_signup": False
+            }
+        }
+
+        data, status = await self.request("POST", "tournaments", json=payload)
+        if status == 200:
+            await ctx.send(f"✅ Tournament **{name}** created with slug `{slug}`.\nLink: https://challonge.com/{slug}")
+        else:
+            await ctx.send(f"❌ Failed to create tournament: {data.get('errors') or data}")
+
 
     @commands.command(aliases=["fp"])
     @commands.is_owner()
