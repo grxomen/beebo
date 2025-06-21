@@ -6,18 +6,30 @@ import re
 import asyncio
 import random
 import json
+import logging
 from discord.ui import Button, View
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from python_aternos import Client
 from exaroton import Exaroton
 from dotenv import load_dotenv
-from discord.ext.commands import cooldown, BucketType
+from discord.ext.commands import cooldown, BucketType, Context
 
 # commit 27ce7b6
 
 # Load .env variables
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+
+def is_trusted():
+    async def predicate(ctx: Context):
+        return any(role.id == 1366796508288127066 for role in ctx.author.roles)
+    return commands.check(predicate)
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 SERVER_ADDRESS = os.getenv("SERVER_ADDRESS")
@@ -29,9 +41,9 @@ EXAROTON_EMAIL = os.getenv("EXAROTON_EMAIL")
 EXAROTON_PASSWORD = os.getenv("EXAROTON_PASSWORD")
 EXAROTON_TOKEN = os.getenv("EXAROTON_TOKEN")
 exaroton_client = Exaroton(EXAROTON_TOKEN)
-ANNOUNCEMENT_CHANNEL_ID = 1359974211367469147
+ANNOUNCEMENT_CHANNEL_ID = 1383563592447557722
 GUILD_ID = 1046624035464810496
-STATUS_CHANNEL_ID = 1369315007942230036
+STATUS_CHANNEL_ID = 1383563592447557722
 DEV_LOG_CHANNEL_ID = 1369314903701065768
 SUGGESTIONS_FILE = "suggestions.json"
 MC_SERVER_PORT = int(os.getenv("MC_SERVER_PORT", 50430))
@@ -463,14 +475,56 @@ async def meowstarcheck(ctx):
 
 
 @bot.command(aliases=["talk", "broadcast", "bcast"])
-async def say(ctx, *, message: str):
+async def say(ctx, channel_input=None, *, message: str = None):
     if 1366796508288127066 not in [role.id for role in ctx.author.roles]:
         await ctx.send("🚫 You don't have permission to use this command.")
         return
 
-    embed = discord.Embed(description=message, color=0xb0c0ff)
-    channel = bot.get_channel(1359974211367469147)
-    await channel.send(content="<@&1368225900486721616>", embed=embed)
+    # Handle empty call
+    if not channel_input and not message:
+        await ctx.send("❗ You must provide a message.")
+        return
+
+    # Try to resolve channel from input
+    target_channel = None
+    if channel_input:
+        channel_id = None
+        if channel_input.startswith("<#") and channel_input.endswith(">"):
+            channel_id = int(channel_input[2:-1])
+        elif channel_input.isdigit():
+            channel_id = int(channel_input)
+        else:
+            # Try name match
+            matched = [c for c in ctx.guild.text_channels if c.name.lower() == channel_input.lower()]
+            if matched:
+                target_channel = matched[0]
+
+        if channel_id:
+            target_channel = bot.get_channel(channel_id)
+
+        # If we *couldn't* resolve the channel, treat it as message text
+        if not target_channel:
+            message = f"{channel_input} {message or ''}".strip()
+            target_channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+    else:
+        target_channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
+
+    # Final check
+    if not message:
+        await ctx.send("❗ You must provide a message to send.")
+        return
+
+    try:
+        embed = discord.Embed(description=message, color=0xb0c0ff)
+        await target_channel.send(content=ROLE_TO_TAG, embed=embed)
+        await ctx.send(f"✅ Message sent to {target_channel.mention}")
+    except discord.Forbidden:
+        await ctx.send("🚫 Bot lacks permission to send messages in that channel.")
+    except Exception as e:
+        await ctx.send("💥 Failed to send the message.")
+        logging.exception(f"Error sending message to {target_channel.id}: {e}")
+
+
 
 @bot.command(aliases=["rle"])
 async def reloadenv(ctx):
@@ -485,6 +539,67 @@ async def reloadenv(ctx):
         color=0xb0c0ff
     )
     await ctx.send(embed=embed)
+
+@bot.command(aliases=["check", "perms"])
+@is_trusted()
+async def checkperms(ctx, channel_input: str = None):
+    if not channel_input:
+        await ctx.send("ℹ️ Please provide a channel name, mention, ID, or `all`.")
+        return
+
+    if channel_input.lower() == "all":
+        report = []
+        for channel in ctx.guild.text_channels:
+            perms = channel.permissions_for(ctx.guild.me)
+            missing = []
+            if not perms.view_channel:
+                missing.append("View")
+            if not perms.send_messages:
+                missing.append("Send")
+            if not perms.embed_links:
+                missing.append("Embed")
+
+            if missing:
+                report.append(f"❌ `{channel.name}`: Missing {', '.join(missing)}")
+            else:
+                report.append(f"✅ `{channel.name}`: All good")
+
+        pages = [report[i:i + 20] for i in range(0, len(report), 20)]
+        for page in pages:
+            await ctx.send("\n".join(page))
+        return
+
+    # Else: normal single-channel check
+    channel = None
+    if channel_input.startswith("<#") and channel_input.endswith(">"):
+        channel_id = int(channel_input[2:-1])
+        channel = bot.get_channel(channel_id)
+    elif channel_input.isdigit():
+        channel = bot.get_channel(int(channel_input))
+    else:
+        matches = [c for c in ctx.guild.text_channels if c.name == channel_input]
+        if matches:
+            channel = matches[0]
+
+    if not channel:
+        await ctx.send("❌ Channel not found.")
+        return
+
+    perms = channel.permissions_for(ctx.guild.me)
+    missing = []
+    if not perms.view_channel:
+        missing.append("View Channel")
+    if not perms.send_messages:
+        missing.append("Send Messages")
+    if not perms.embed_links:
+        missing.append("Embed Links")
+
+    if not missing:
+        await ctx.send(f"✅ I have all necessary permissions in {channel.mention}.")
+    else:
+        await ctx.send(
+            f"⚠️ Missing permissions in {channel.mention}: {', '.join(missing)}"
+        )
 
 @bot.command()
 async def reload(ctx):
@@ -942,10 +1057,16 @@ async def log_dev_commands(ctx):
         if log_channel:
             await log_channel.send(f"🛠️ Command `{ctx.command}` used by **{ctx.author}** in #{ctx.channel}")
 
+
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
     await bot.process_commands(message)
 
-bot.run(TOKEN)
+# Main async startup
+async def main():
+    await bot.load_extension("cogs.challonge_cog")
+    await bot.start(TOKEN)
+
+asyncio.run(main())
