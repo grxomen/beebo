@@ -4,6 +4,7 @@ from mcstatus import JavaServer
 import json
 import time
 import asyncio
+from typing import Union
 import os
 from playwright.async_api import async_playwright
 
@@ -189,12 +190,33 @@ class ExarotonCog(commands.Cog):
 
     @commands.command(name="add", aliases=["grant"])
     @commands.is_owner()
-    async def adddonation(self, ctx, member: discord.Member, amount: float):
+    async def adddonation(self, ctx, user: Union[discord.Member, discord.User, str], amount: float):
+    try:
+        # Resolve user
+        if isinstance(user, (discord.Member, discord.User)):
+            target = user
+        else:
+            user_id = int(user)
+            target = ctx.guild.get_member(user_id) or await self.bot.fetch_user(user_id)
+
         donor_data = load_data(DONOR_FILE)
-        user_id = str(member.id)
-        donor_data[user_id] = donor_data.get(user_id, 0) + amount
+        user_id_str = str(target.id)
+        donor_data[user_id_str] = donor_data.get(user_id_str, 0) + amount
         save_data(DONOR_FILE, donor_data)
-        await ctx.send(f"<:pixel_cake:1368264542064345108> Added **{amount:.2f}** credits to {member.display_name}'s donation total.")
+
+        await ctx.send(
+            f"<:pixel_cake:1368264542064345108> Added **{amount:.2f}** credits to **{target.display_name}**'s donation total."
+        )
+
+    except Exception as e:
+        await ctx.send(f"⚠️ Couldn't add donation: {e}")
+
+    @adddonation.error
+    async def adddonation_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("⚠️ You must name a user that exists and specify an amount, like `!grant @user 100`.")
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send("❌ Invalid input. Make sure you're naming a valid user and the amount is a number.")
 
     @commands.command()
     async def burn(self, ctx, hours: float = 1, ram: int = 10):
@@ -212,7 +234,7 @@ class ExarotonCog(commands.Cog):
             lifespan = "⚠️ Invalid RAM config for burn estimate."
 
         embed = discord.Embed(
-            title="🔥 Exaroton Burn Estimate",
+            title="🔥 Termite Burn Estimate",
             description=f"Using **{ram}GB RAM**...",
             color=0x462f80
         )
@@ -224,6 +246,42 @@ class ExarotonCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(name="setdonation", aliases=["setdono", "forceadd"])
+    @commands.is_owner()
+    async def set_donation(self, ctx, user: Union[discord.Member, discord.User, str], amount: float):
+        try:
+            if isinstance(user, (discord.Member, discord.User)):
+                target = user
+            else:
+                user_id = int(user)
+                target = ctx.guild.get_member(user_id) or await self.bot.fetch_user(user_id)
+    
+            donor_data = load_data(DONOR_FILE)
+            donor_data[str(target.id)] = amount
+            save_data(DONOR_FILE, donor_data)
+    
+            await ctx.send(f"✏️ Set **{target.display_name}**'s donation total to **{amount:.2f} credits**.")
+        except Exception as e:
+            await ctx.send(f"⚠️ Error setting donation: {e}")
+
+
+    @commands.command(name="resetdono", aliases=["cleardono", "nukedono"])
+    @commands.is_owner()
+    async def reset_donation(self, ctx, user: Union[discord.Member, discord.User, str]):
+        try:
+            if isinstance(user, (discord.Member, discord.User)):
+                target = user
+            else:
+                user_id = int(user)
+                target = ctx.guild.get_member(user_id) or await self.bot.fetch_user(user_id)
+    
+            donor_data = load_data(DONOR_FILE)
+            donor_data[str(target.id)] = 0
+            save_data(DONOR_FILE, donor_data)
+    
+            await ctx.send(f"<:pixel_toast:1386118938714177649> Cleared **{target.display_name}**'s donation record.")
+        except Exception as e:
+            await ctx.send(f"⚠️ Error resetting donation: {e}")
 
 
     @commands.command()
@@ -307,7 +365,7 @@ class ExarotonCog(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="📦 Exaroton Commands",
+            title="<:beebo:1383282292478312519> Termite MC Commands",
             description="Commands for managing and supporting the Termite server.",
             color=0x462f80
         )
