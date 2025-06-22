@@ -120,17 +120,17 @@ class ExarotonCog(commands.Cog):
     async def setcredits(self, ctx, amount: float, member: discord.Member = None):
         user = member or ctx.author
         user_id = str(user.id)
-    
+
         # Update credit balance (you can customize whether this affects server logic or is just for stats)
         self.credit_balance = float(amount) if user == ctx.author else self.credit_balance
-    
+
         # Update personal donation record
         donations = load_data("data/exaroton_donations.json")
         donations[user_id] = donations.get(user_id, 0) + amount
         save_data("data/exaroton_donations.json", donations)
-    
+
         await ctx.send(f"✅ Set **{amount} credits** for {user.mention}.")
-    
+
         # Optionally: show leaderboard position
         leaderboard = sorted(donations.items(), key=lambda x: x[1], reverse=True)
         position = [uid for uid, _ in leaderboard].index(user_id) + 1
@@ -142,7 +142,7 @@ class ExarotonCog(commands.Cog):
         global last_donorboard_time
         now = time.time()
         is_dev = ctx.author.id in DEV_USER_IDS
-    
+
         if not is_dev and now - last_donorboard_time < DONORBOARD_COOLDOWN_SECONDS:
             remaining = int(DONORBOARD_COOLDOWN_SECONDS - (now - last_donorboard_time))
             embed = discord.Embed(
@@ -153,21 +153,21 @@ class ExarotonCog(commands.Cog):
             embed.set_footer(text="Try again later.")
             await ctx.send(embed=embed)
             return
-    
+
         last_donorboard_time = now
-    
+
         donations = load_data("data/exaroton_donations.json")
         if not donations:
             await ctx.send("📭 No donation data yet!")
             return
-    
+
         leaderboard = sorted(donations.items(), key=lambda x: x[1], reverse=True)
         embed = discord.Embed(
             title="🏆 Top Server Donors",
             description="Most generous credit contributors ❤️",
             color=0x462f80
         )
-    
+
         for i, (user_id, total) in enumerate(leaderboard[:top], start=1):
             user = self.bot.get_user(int(user_id)) or f"<@{user_id}>"
             name = user.display_name if hasattr(user, 'display_name') else str(user)
@@ -176,10 +176,10 @@ class ExarotonCog(commands.Cog):
                 value=f"💰 {total:.2f} credits",
                 inline=False
             )
-    
+
         if is_dev:
             embed.set_footer(text="<:pixelGUY:1368269152334123049> Dev bypass")
-    
+
         view = DonateButton(self.credit_pool_code)
         await ctx.send(embed=embed, view=view)
 
@@ -193,7 +193,7 @@ class ExarotonCog(commands.Cog):
         session_burn = round(rate_per_gb_hour * ram * hours, 2)
         daily_burn = round(rate_per_gb_hour * ram * 24, 2)
         weekly_burn = round(daily_burn * 7, 2)
-    
+
         # Estimate runtime left based on current credit balance
         if ram > 0:
             hours_left = self.credit_balance / (rate_per_gb_hour * ram)
@@ -201,7 +201,7 @@ class ExarotonCog(commands.Cog):
             lifespan = f"<:beebo:1383282292478312519> Estimated uptime left: **{hours_left:.1f}h** (~{days_left:.1f} days)"
         else:
             lifespan = "⚠️ Invalid RAM config for burn estimate."
-    
+
         embed = discord.Embed(
             title="🔥 Exaroton Burn Estimate",
             description=f"Using **{ram}GB RAM**...",
@@ -212,7 +212,7 @@ class ExarotonCog(commands.Cog):
         embed.add_field(name="Per 7d/week", value=f"📅 **{weekly_burn} credits**", inline=False)
         embed.add_field(name="Lifespan at current balance", value=lifespan, inline=False)
         embed.set_footer(text="Estimates assume 1 credit/GB/hour.")
-    
+
         await ctx.send(embed=embed)
 
 
@@ -231,7 +231,7 @@ class ExarotonCog(commands.Cog):
         if not code:
             await ctx.send("❌ No credit pool link set.")
             return
-    
+
         # ─── Dev Bypass ─────────────────────────────
         if user_id == 546650815297880066:
             embed = discord.Embed(
@@ -243,7 +243,7 @@ class ExarotonCog(commands.Cog):
             view = ServerControlView(code)
             await ctx.send(embed=embed, view=view)
             return
-    
+
         elif user_id == 858462569043722271:
             embed = discord.Embed(
                 title="💳 Top Up Server Credits",
@@ -254,7 +254,7 @@ class ExarotonCog(commands.Cog):
             view = ServerControlView(code)
             await ctx.send(embed=embed, view=view)
             return
-    
+
         # ─── Donor Role Check ───────────────────────
         if donor_role_id in [role.id for role in ctx.author.roles]:
             embed = discord.Embed(
@@ -266,7 +266,7 @@ class ExarotonCog(commands.Cog):
             view = ServerControlView(code)
             await ctx.send(embed=embed, view=view)
             return
-    
+
         # ─── Public Block ────────────────────────────
         await ctx.send("🚫 You don't have permission to access the donation panel.")
 
@@ -276,12 +276,12 @@ class ExarotonCog(commands.Cog):
         if donor_role_id not in [role.id for role in ctx.author.roles]:
             await ctx.send("🚫 You don't have permission to access the donation panel.")
             return
-    
+
         code = self.credit_pool_code or load_data(POOL_FILE).get("pool")
         if not code:
             await ctx.send("❌ No credit pool link set.")
             return
-    
+
         embed = discord.Embed(
             title="💸 Donate Server Credits",
             description="Thank you for supporting the server! Use the button below to add credits directly.",
