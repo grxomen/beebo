@@ -10,6 +10,7 @@ from playwright.async_api import async_playwright
 
 DATA_FILE = "data/exaroton_data.json"
 POOL_FILE = "data/exaroton_pool.json"
+DONOR_FILE = "data/exaroton_donations.json"
 donor_role_id = 1386101967297843270
 EXAROTON_TRUSTED = [448896936481652777, 546650815297880066, 858462569043722271]
 CHECK_INTERVAL_HOURS = 3
@@ -191,25 +192,25 @@ class ExarotonCog(commands.Cog):
     @commands.command(name="add", aliases=["grant"])
     @commands.is_owner()
     async def adddonation(self, ctx, user: Union[discord.Member, discord.User, str], amount: float):
-    try:
-        # Resolve user
-        if isinstance(user, (discord.Member, discord.User)):
-            target = user
-        else:
-            user_id = int(user)
-            target = ctx.guild.get_member(user_id) or await self.bot.fetch_user(user_id)
+        try:
+            # Resolve user
+            if isinstance(user, (discord.Member, discord.User)):
+                target = user
+            else:
+                user_id = int(user)
+                target = ctx.guild.get_member(user_id) or await self.bot.fetch_user(user_id)
 
-        donor_data = load_data(DONOR_FILE)
-        user_id_str = str(target.id)
-        donor_data[user_id_str] = donor_data.get(user_id_str, 0) + amount
-        save_data(DONOR_FILE, donor_data)
+            donor_data = load_data(DONOR_FILE)
+            user_id_str = str(target.id)
+            donor_data[user_id_str] = donor_data.get(user_id_str, 0) + amount
+            save_data(DONOR_FILE, donor_data)
 
-        await ctx.send(
-            f"<:pixel_cake:1368264542064345108> Added **{amount:.2f}** credits to **{target.display_name}**'s donation total."
-        )
+            await ctx.send(
+                f"<:pixel_cake:1368264542064345108> Added **{amount:.2f}** credits to **{target.display_name}**'s donation total."
+            )
 
-    except Exception as e:
-        await ctx.send(f"⚠️ Couldn't add donation: {e}")
+        except Exception as e:
+            await ctx.send(f"⚠️ Couldn't add donation: {e}")
 
     @adddonation.error
     async def adddonation_error(self, ctx, error):
