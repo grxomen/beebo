@@ -53,7 +53,7 @@ class DonateButton(discord.ui.View):
                 style=discord.ButtonStyle.link
             ))
 
-    
+
 class ExarotonCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
