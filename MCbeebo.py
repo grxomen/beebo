@@ -1131,6 +1131,7 @@ async def on_message(message):
 async def main():
     await bot.load_extension("cogs.challonge_cog")
     await bot.load_extension("cogs.exaroton")
+    await bot.load_extension("cogs.pinpoint")
     await bot.start(TOKEN)
 
 asyncio.run(main())
