@@ -187,6 +187,15 @@ class ExarotonCog(commands.Cog):
     async def credits(self, ctx):
         await ctx.send(f"💰 Current credit balance: **{self.credit_balance}** credits.")
 
+    @commands.command(name="add", aliases=["grant"])
+    @commands.is_owner()
+    async def adddonation(self, ctx, member: discord.Member, amount: float):
+        donor_data = load_data(DONOR_FILE)
+        user_id = str(member.id)
+        donor_data[user_id] = donor_data.get(user_id, 0) + amount
+        save_data(DONOR_FILE, donor_data)
+        await ctx.send(f"<:pixel_cake:1368264542064345108> Added **{amount:.2f}** credits to {member.display_name}'s donation total.")
+
     @commands.command()
     async def burn(self, ctx, hours: float = 1, ram: int = 10):
         rate_per_gb_hour = 1.0  # Exaroton's current rate
