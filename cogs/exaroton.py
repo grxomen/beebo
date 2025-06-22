@@ -73,7 +73,6 @@ class ExarotonCog(commands.Cog):
         try:
             status = server.status()
 
-            # ─── Server Just Came Online ─────────────────────────
             if self.last_status == "offline":
                 embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0x462f80)
                 embed.add_field(name="Java IP", value=self.server_address, inline=False)
@@ -87,7 +86,6 @@ class ExarotonCog(commands.Cog):
                 await channel.send(content=self.role_to_tag, embed=embed)
                 self.last_status = "online"
 
-                # ─── Burn Warning Embed ─────────────────────────────
                 if self.credit_balance <= 1030.8:
                     try:
                         warn_embed = discord.Embed(
@@ -116,9 +114,6 @@ class ExarotonCog(commands.Cog):
                 embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
                 await channel.send(content=self.role_to_tag, embed=embed)
             self.last_status = "offline"
-
-
-
 
     @commands.command()
     @commands.is_owner()
