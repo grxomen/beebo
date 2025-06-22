@@ -71,6 +71,30 @@ class PinPoint(commands.Cog):
                             inline=False)
         await ctx.send(embed=embed)
 
+    @commands.command(name="markfor")
+    @commands.has_permissions(administrator=True)
+    async def mark_for(self, ctx, attributed: discord.Member, x: int, z: int, *, description: str):
+        """Add a pin for another user (admin/dev-only)."""
+        pin_data = load_data(PIN_DATA_FILE)
+        pin_id = str(max([int(k) for k in pin_data.keys()] + [0]) + 1)
+    
+        pin_data[pin_id] = {
+            "x": x,
+            "z": z,
+            "description": description,
+            "submitter_id": str(ctx.author.id),
+            "attributed_user_id": str(attributed.id),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    
+        save_data(PIN_DATA_FILE, pin_data)
+    
+        icon = get_icon_for_type(description)  # optional: emoji matching logic based on type
+        embed = discord.Embed(title=f"{icon} {description}", color=0x462f80)
+        embed.add_field(name="🧭 Coordinates", value=f"x: {x}, z: {z}", inline=False)
+        embed.set_footer(text=f"Marked by {ctx.author.display_name} for {attributed.display_name}")
+        await ctx.send(embed=embed)
+
     @commands.command(name="pin")
     async def pin(self, ctx, pin_id: str):
         pins = load_pins()
