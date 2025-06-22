@@ -152,6 +152,24 @@ class PinPoint(commands.Cog):
         save_pins(pins)
         await ctx.send(f"🗑️ Pin `{pin_id}` deleted.")
 
+        @commands.command(name="pinhelp", aliases=["pincmds", "pinmanual"])
+        async def pinhelp(self, ctx):
+            embed = discord.Embed(
+                title="📍 PinPoint Commands",
+                description="All available location tracking commands",
+                color=0x462f80
+            )
+            embed.add_field(name="!mark x z description", value="Add a new pin at coordinates with a short description.", inline=False)
+            embed.add_field(name="!pins", value="List the latest 5 pins added.", inline=False)
+            embed.add_field(name="!pin ID", value="View detailed info on a specific pin.", inline=False)
+            embed.add_field(name="!filterpins query", value="Search for pins by keyword, user ID, or description.", inline=False)
+            embed.add_field(name="!editpin ID new description", value="Edit your own or dev-assigned pin's description.", inline=False)
+            embed.add_field(name="!deletepin ID", value="Delete your own or dev-assigned pin.", inline=False)
+            embed.add_field(name="!exportpins", value="Export all pins as `.json` and `.csv` files.", inline=False)
+            embed.set_footer(text="PinPoint • Map tracking for explorers and troublemakers 🗺️")
+
+            await ctx.send(embed=embed)
+
     @commands.command(name="exportpins")
     async def exportpins(self, ctx):
         pins = load_pins()
