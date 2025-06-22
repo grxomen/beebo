@@ -65,6 +65,55 @@ class ExarotonCog(commands.Cog):
         self.last_status = "offline"
         self.check_server_status.start()
 
+    @tasks.loop(hours=CHECK_INTERVAL_HOURS)
+    async def check_server_status(self):
+        channel = self.bot.get_channel(self.channel_id)
+        server = JavaServer.lookup(self.server_address)
+
+        try:
+            status = server.status()
+
+            if self.last_status == "offline":
+                embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0x462f80)
+                embed.add_field(name="Java IP", value=self.server_address, inline=False)
+                embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
+
+                if status.players.online > 0:
+                    players = ', '.join([p.name for p in status.players.sample]) if status.players.sample else "Unknown players"
+                    embed.add_field(name="Who's Online", value=players, inline=False)
+
+                embed.set_footer(text="Summon the squad before Exaroton falls asleep.")
+                await channel.send(content=self.role_to_tag, embed=embed)
+                self.last_status = "online"
+
+                if self.credit_balance <= 1030.8:
+                    try:
+                        warn_embed = discord.Embed(
+                            title="⚠️ Low Server Credits!",
+                            description=f"Current balance: **{self.credit_balance} credits**\nTop up soon to avoid downtime.",
+                            color=0xffaa00
+                        )
+                        hours_left = round(self.credit_balance / 10, 1)
+                        warn_embed.add_field(name="Burn Estimate", value=f"~{hours_left}h left @ 10GB RAM", inline=False)
+                        warn_embed.set_footer(text="Use !topup to donate credits.")
+                        view = ServerControlView(self.credit_pool_code)
+                        await channel.send(embed=warn_embed, view=view)
+                    except Exception as e:
+                        print(f"[⚠️ Burn Warning Error] {e}")
+
+            else:
+                print("[Status Check] Server still online, no alert sent.")
+
+        except Exception as e:
+            print(f"[🔻 Server Down Check] {e}")
+            if self.last_status == "online":
+                embed = discord.Embed(
+                    title="**Minecraft Server is OFFLINE or SLEEPING**",
+                    color=0xff5555
+                )
+                embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
+                await channel.send(content=self.role_to_tag, embed=embed)
+            self.last_status = "offline"
 
     @commands.command()
     @commands.is_owner()
