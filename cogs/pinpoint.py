@@ -75,10 +75,10 @@ class PinPoint(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def mark_for(self, ctx, attributed: discord.Member, x: int, z: int, *, description: str):
         """Add a pin for another user (admin/dev-only)."""
-        pin_data = load_data(PIN_DATA_FILE)
-        pin_id = str(max([int(k) for k in pin_data.keys()] + [0]) + 1)
-    
-        pin_data[pin_id] = {
+        pins = load_pins()
+        pin_id = str(max([int(k) for k in pins.keys()] + [0]) + 1)
+
+        pins[pin_id] = {
             "x": x,
             "z": z,
             "description": description,
@@ -86,14 +86,23 @@ class PinPoint(commands.Cog):
             "attributed_user_id": str(attributed.id),
             "timestamp": datetime.utcnow().isoformat()
         }
-    
-        save_data(PIN_DATA_FILE, pin_data)
-    
-        icon = get_icon_for_type(description)  # optional: emoji matching logic based on type
-        embed = discord.Embed(title=f"{icon} {description}", color=0x462f80)
+
+        save_pins(pins)
+
+        embed = discord.Embed(title=f"📍 {description}", color=0x462f80)
         embed.add_field(name="🧭 Coordinates", value=f"x: {x}, z: {z}", inline=False)
         embed.set_footer(text=f"Marked by {ctx.author.display_name} for {attributed.display_name}")
         await ctx.send(embed=embed)
+    
+    @mark_for.error
+    async def markfor_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("❗ Please mention a valid user for attribution.")
+        elif isinstance(error, commands.MissingPermissions):
+            await ctx.send("🚫 You need admin permissions to use this command.")
+        else:
+            await ctx.send("⚠️ An error occurred while processing the command.")
+
 
     @commands.command(name="pin")
     async def pin(self, ctx, pin_id: str):
@@ -145,14 +154,14 @@ class PinPoint(commands.Cog):
         if not pin:
             await ctx.send("❌ Pin not found.")
             return
-
+    
         user_id = str(ctx.author.id)
         is_owner = pin["submitter_id"] == user_id or user_id in map(str, DEV_IDS)
-
+    
         if not is_owner:
             await ctx.send("🚫 You can't edit this pin.")
             return
-
+    
         pin["description"] = new_desc
         save_pins(pins)
         await ctx.send(f"✏️ Pin `{pin_id}` updated.")
@@ -176,23 +185,23 @@ class PinPoint(commands.Cog):
         save_pins(pins)
         await ctx.send(f"🗑️ Pin `{pin_id}` deleted.")
 
-        @commands.command(name="pinhelp", aliases=["pincmds", "pinmanual"])
-        async def pinhelp(self, ctx):
-            embed = discord.Embed(
-                title="📍 PinPoint Commands",
-                description="All available location tracking commands",
-                color=0x462f80
-            )
-            embed.add_field(name="!mark x z description", value="Add a new pin at coordinates with a short description.", inline=False)
-            embed.add_field(name="!pins", value="List the latest 5 pins added.", inline=False)
-            embed.add_field(name="!pin ID", value="View detailed info on a specific pin.", inline=False)
-            embed.add_field(name="!filterpins query", value="Search for pins by keyword, user ID, or description.", inline=False)
-            embed.add_field(name="!editpin ID new description", value="Edit your own or dev-assigned pin's description.", inline=False)
-            embed.add_field(name="!deletepin ID", value="Delete your own or dev-assigned pin.", inline=False)
-            embed.add_field(name="!exportpins", value="Export all pins as `.json` and `.csv` files.", inline=False)
-            embed.set_footer(text="PinPoint • Map tracking for explorers and troublemakers 🗺️")
+    @commands.command(name="pinhelp", aliases=["pincmds", "pinmanual"])
+    async def pinhelp(self, ctx):
+        embed = discord.Embed(
+            title="📍 PinPoint Commands",
+            description="All available location tracking commands",
+            color=0x462f80
+        )
+        embed.add_field(name="!mark x z description", value="Add a new pin at coordinates with a short description.", inline=False)
+        embed.add_field(name="!pins", value="List the latest 5 pins added.", inline=False)
+        embed.add_field(name="!pin ID", value="View detailed info on a specific pin.", inline=False)
+        embed.add_field(name="!filterpins query", value="Search for pins by keyword, user ID, or description.", inline=False)
+        embed.add_field(name="!editpin ID new description", value="Edit your own or dev-assigned pin's description.", inline=False)
+        embed.add_field(name="!deletepin ID", value="Delete your own or dev-assigned pin.", inline=False)
+        embed.add_field(name="!exportpins", value="Export all pins as `.json` and `.csv` files.", inline=False)
+        embed.set_footer(text="PinPoint • Map tracking for explorers and troublemakers 🗺️")
 
-            await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command(name="exportpins")
     async def exportpins(self, ctx):
