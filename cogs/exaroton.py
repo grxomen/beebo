@@ -88,7 +88,7 @@ class ExarotonCog(commands.Cog):
                 await channel.send(content=self.role_to_tag, embed=embed)
                 self.last_status = "online"
 
-                if self.credit_balance <= 1030.8:
+                if self.credit_balance <= 500:
                     try:
                         warn_embed = discord.Embed(
                             title="⚠️ Low Server Credits!",
