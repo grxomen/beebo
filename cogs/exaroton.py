@@ -180,7 +180,7 @@ class ExarotonCog(commands.Cog):
             )
 
         if is_dev:
-            embed.set_footer(text="<:pixelGUY:1368269152334123049> Dev bypass")
+            embed.set_footer(text="Dev bypass (GUY)")
 
         view = DonateButton(self.credit_pool_code)
         await ctx.send(embed=embed, view=view)
@@ -307,7 +307,7 @@ class ExarotonCog(commands.Cog):
                 description="Help keep the server running! Use the button below to donate credits.",
                 color=0x462f80
             )
-            embed.set_footer(text="<:pixel_cake:1368264542064345108> Dev bypass")
+            embed.set_footer(text="Dev bypass (cake)")
             view = ServerControlView(code)
             await ctx.send(embed=embed, view=view)
             return
@@ -318,7 +318,7 @@ class ExarotonCog(commands.Cog):
                 description="Help keep the server running! Use the button below to donate credits.",
                 color=0x462f80
             )
-            embed.set_footer(text="<:pixel_toast:1386118938714177649> Dev bypass")
+            embed.set_footer(text="Dev bypass (Toast)")
             view = ServerControlView(code)
             await ctx.send(embed=embed, view=view)
             return
