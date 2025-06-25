@@ -211,7 +211,7 @@ class ExtendedRewardsCog(commands.Cog):
         embed = discord.Embed(
             title="🔗 Minecraft Link Status",
             description=f"You are linked to **{username}**",
-            color=discord.Color.green()
+            color=color=0x3d5e8e
         )
         embed.add_field(name="UUID", value=uuid, inline=False)
         embed.set_footer(text="Use !unlinkmc to disconnect if needed.")
