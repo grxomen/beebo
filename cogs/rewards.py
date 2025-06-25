@@ -192,27 +192,186 @@ class RewardsCog(commands.Cog):
         save_json(POOL_FILE, pool)
         await ctx.send(f"💸 Added **{amount:.2f}** credits. New pool balance: **{pool['credits']:.2f}**")
 
-    @commands.command(name="linkstatus", aliases=["mclink", "linked"])
-    async def link_status(self, ctx):
-        """Check your current linked Minecraft username and UUID."""
-        links = load_json(LINK_FILE)
-        user_data = links.get(str(ctx.author.id))
+    @commands.command(name="linkmc", aliases=["uuidlink", "setuuid"])
+    async def linkmc(self, ctx, mc_username: str):
+        user_id = ctx.author.id
+        now = time.time()
     
-        if not user_data:
-            await ctx.send("🔍 You haven't linked your Minecraft account yet. Use `!linkmc <username>` to do so.")
+        # Cooldown check for non-devs
+        if user_id not in DEV_USER_ID:
+            last_time = cooldowns.get(user_id, 0)
+            if now - last_time < COOLDOWN_SECONDS:
+                remaining = int(COOLDOWN_SECONDS - (now - last_time))
+                embed = discord.Embed(
+                    title="⏳ Slow down!",
+                    description=f"You're on cooldown. Try again in **{remaining}** seconds.",
+                    color=discord.Color.orange()
+                )
+                embed.set_footer(text="Only devs can bypass this.")
+                await ctx.send(embed=embed)
+                return
+            cooldowns[user_id] = now  # update
+    
+        # Mojang UUID request
+        url = f"https://api.mojang.com/users/profiles/minecraft/{mc_username}"
+        response = requests.get(url)
+    
+        if response.status_code != 200:
+            await ctx.send(f"❌ Could not find Minecraft user `{mc_username}`.")
             return
     
-        username = user_data.get("username", "Unknown")
-        uuid = user_data.get("uuid", "N/A")
+        data = response.json()
+        uuid = data["id"]
+        formatted_uuid = f"{uuid[:8]}-{uuid[8:12]}-{uuid[12:16]}-{uuid[16:20]}-{uuid[20:]}"
     
-        embed = discord.Embed(
-            title="🔗 Minecraft Link Status",
-            description=f"You are linked to **{username}**",
-            color=0x3d5e8e
-        )
-        embed.add_field(name="UUID", value=uuid, inline=False)
-        embed.set_footer(text="Use !unlinkmc to disconnect if needed.")
-        await ctx.send(embed=embed)
+        links = load_json(LINK_FILE)
+    
+        # Check if MC username already linked or flagged
+        for linked_id, entry in links.items():
+            if entry.get("username", "").lower() == mc_username.lower():
+                await ctx.send("❌ That Minecraft username is already claimed or under review by another Discord account.")
+    
+                # Optional logging
+                log_channel = self.bot.get_channel(MC_LOG_CHANNEL_ID)
+                if log_channel:
+                    embed = discord.Embed(title="⚠️ Link Attempt Blocked", color=discord.Color.red())
+                    embed.add_field(name="Attempted Username", value=mc_username)
+                    embed.add_field(name="By", value=f"{ctx.author} ({ctx.author.id})", inline=False)
+                    embed.timestamp = datetime.utcnow()
+                    await log_channel.send(embed=embed)
+                return
+    
+        # Flag as unverified until manually approved
+        links[str(user_id)] = {
+            "username": mc_username,
+            "uuid": uuid,
+            "verified": False
+        }
+        save_json(LINK_FILE, links)
+    
+        await ctx.send(f"📝 Your account has been linked to **{mc_username}** and is pending verification.")
+    
+        # Log to dev channel
+        log_channel = self.bot.get_channel(MC_LOG_CHANNEL_ID)
+        if log_channel:
+            embed = discord.Embed(
+                title="📝 New Link Request (Pending)",
+                color=discord.Color.blurple()
+            )
+            embed.add_field(name="User", value=f"{ctx.author} ({ctx.author.mention})", inline=False)
+            embed.add_field(name="MC Username", value=mc_username, inline=True)
+            embed.add_field(name="UUID", value=f"`{formatted_uuid}`", inline=False)
+            embed.add_field(name="Status", value="Pending verification", inline=True)
+            embed.set_footer(text=f"Submitted in #{ctx.channel}", icon_url=ctx.author.display_avatar.url)
+            embed.timestamp = datetime.utcnow()
+            await log_channel.send(embed=embed)
+
+    @commands.command(name="verify", aliases=["appuser", "mcverify", "mcv"])
+    async def verify_user(self, ctx, member: discord.Member):
+        """Dev-only: Verify a pending Minecraft link request."""
+        if ctx.author.id not in DEV_USER_ID:
+            await ctx.send("🚫 You don’t have permission to do this.")
+            return
+    
+        links = load_json(LINK_FILE)
+        user_id = str(member.id)
+    
+        if user_id not in links:
+            await ctx.send("❌ That user has no linked Minecraft account.")
+            return
+    
+        if links[user_id].get("verified", False):
+            await ctx.send("✅ This user is already verified.")
+            return
+    
+        links[user_id]["verified"] = True
+        save_json(LINK_FILE, links)
+    
+        await ctx.send(f"✅ Verified **{member.display_name}**'s Minecraft link.")
+    
+        log_channel = self.bot.get_channel(MC_LOG_CHANNEL_ID)
+        if log_channel:
+            embed = discord.Embed(
+                title="🔓 MC Link Verified",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="Verified By", value=ctx.author.mention, inline=False)
+            embed.add_field(name="User", value=member.mention, inline=False)
+            embed.add_field(name="Minecraft Username", value=links[user_id].get("username", "N/A"), inline=True)
+            embed.add_field(name="UUID", value=links[user_id].get("uuid", "N/A"), inline=False)
+            embed.set_footer(text="Manual verification complete")
+            embed.timestamp = datetime.utcnow()
+            await log_channel.send(embed=embed)
+
+    @commands.command(name="unvuser", aliases=["rejuser", "revoke"])
+    async def unverify_user(self, ctx, member: discord.Member):
+        """Dev-only: Fully remove a user's MC link and verification."""
+        if ctx.author.id not in DEV_USER_ID:
+            await ctx.send("🚫 You don’t have permission to do this.")
+            return
+    
+        links = load_json(LINK_FILE)
+        user_id = str(member.id)
+    
+        if user_id not in links:
+            await ctx.send("❌ That user has no linked Minecraft account.")
+            return
+    
+        removed_entry = links.pop(user_id)
+        save_json(LINK_FILE, links)
+    
+        await ctx.send(f"🗑️ Removed Minecraft link for **{member.display_name}**.")
+    
+        log_channel = self.bot.get_channel(MC_LOG_CHANNEL_ID)
+        if log_channel:
+            embed = discord.Embed(
+                title="🗑️ MC Link Deleted",
+                color=discord.Color.red()
+            )
+            embed.add_field(name="Deleted By", value=ctx.author.mention, inline=False)
+            embed.add_field(name="User", value=member.mention, inline=False)
+            embed.add_field(name="MC Username", value=removed_entry.get("username", "N/A"), inline=True)
+            embed.add_field(name="UUID", value=removed_entry.get("uuid", "N/A"), inline=False)
+            embed.set_footer(text="Link forcibly removed")
+            embed.timestamp = datetime.utcnow()
+            await log_channel.send(embed=embed)
+
+    @commands.command(name="forceunlink", aliases=["unlinkid", "unlinkuser"])
+    async def force_unlink(self, ctx, mc_username: str):
+        """Dev-only: Unlink a Minecraft username from any Discord account."""
+        if ctx.author.id not in DEV_USER_ID:
+            await ctx.send("🚫 You don’t have permission to do this.")
+            return
+    
+        links = load_json(LINK_FILE)
+        target_id = None
+        for uid, entry in links.items():
+            if entry.get("username", "").lower() == mc_username.lower():
+                target_id = uid
+                break
+    
+        if not target_id:
+            await ctx.send(f"❌ No Discord account is linked to `{mc_username}`.")
+            return
+    
+        removed = links.pop(target_id)
+        save_json(LINK_FILE, links)
+    
+        await ctx.send(f"💥 Force-unlinked `{mc_username}` from <@{target_id}>.")
+    
+        log_channel = self.bot.get_channel(MC_LOG_CHANNEL_ID)
+        if log_channel:
+            embed = discord.Embed(
+                title="💥 Minecraft Username Force-Unlinked",
+                color=discord.Color.dark_red()
+            )
+            embed.add_field(name="Moderator", value=ctx.author.mention, inline=False)
+            embed.add_field(name="Minecraft Username", value=mc_username, inline=True)
+            embed.add_field(name="UUID", value=removed.get("uuid", "N/A"), inline=False)
+            embed.add_field(name="Former Discord ID", value=f"<@{target_id}>", inline=False)
+            embed.set_footer(text="Forced unlink")
+            embed.timestamp = datetime.utcnow()
+            await log_channel.send(embed=embed)
 
 
     @commands.command(name="devlinkmc")
