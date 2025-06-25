@@ -32,28 +32,38 @@ class PinPoint(commands.Cog):
         self.bot = bot
 
     @commands.command(name="mark")
-    async def mark(self, ctx, x: int, z: int, *, description: str):
+    async def mark(self, ctx, x: int, z: int, y_or_desc: str, *, description: str = None):
+        """Mark a location for yourself, with optional Y coordinate."""
+        try:
+            y = int(y_or_desc)
+            desc = description
+        except ValueError:
+            y = None
+            desc = f"{y_or_desc} {description}" if description else y_or_desc
+    
         pins = load_pins()
         pin_id = str(max([int(k) for k in pins.keys()] + [0]) + 1)
         timestamp = datetime.utcnow().isoformat()
         submitter_id = str(ctx.author.id)
         attributed_id = str(ctx.author.id)
-
+    
         pins[pin_id] = {
             "x": x,
             "z": z,
-            "description": description,
+            "y": y,  # Optional
+            "description": desc,
             "submitter_id": submitter_id,
             "attributed_user_id": attributed_id,
             "timestamp": timestamp
         }
-
+    
         save_pins(pins)
-        embed = discord.Embed(title="📍 New Pin Added", color=0x462f80)
-        embed.add_field(name="🧭 Coordinates", value=f"x: {x}, z: {z}", inline=False)
-        embed.add_field(name="💬 Description", value=description, inline=False)
+        embed = discord.Embed(title=f"📍 {desc}", color=0x462f80)
+        coord_field = f"x: {x}, z: {z}" if y is None else f"x: {x}, y: {y}, z: {z}"
+        embed.add_field(name="🧭 Coordinates", value=coord_field, inline=False)
         embed.set_footer(text=f"Submitted by {ctx.author.display_name} • ID: {pin_id}")
         await ctx.send(embed=embed)
+
 
     @commands.command(name="pins")
     async def pins(self, ctx):
@@ -73,26 +83,36 @@ class PinPoint(commands.Cog):
 
     @commands.command(name="markfor")
     @commands.has_permissions(administrator=True)
-    async def mark_for(self, ctx, attributed: discord.Member, x: int, z: int, *, description: str):
+    async def mark_for(self, ctx, attributed: discord.Member, x: int, z: int, y_or_desc: str, *, description: str = None):
         """Add a pin for another user (admin/dev-only)."""
+        try:
+            y = int(y_or_desc)
+            desc = description
+        except ValueError:
+            y = None
+            desc = f"{y_or_desc} {description}" if description else y_or_desc
+    
         pins = load_pins()
         pin_id = str(max([int(k) for k in pins.keys()] + [0]) + 1)
-
+    
         pins[pin_id] = {
             "x": x,
             "z": z,
-            "description": description,
+            "y": y,  # Optional
+            "description": desc,
             "submitter_id": str(ctx.author.id),
             "attributed_user_id": str(attributed.id),
             "timestamp": datetime.utcnow().isoformat()
         }
-
+    
         save_pins(pins)
-
-        embed = discord.Embed(title=f"📍 {description}", color=0x462f80)
-        embed.add_field(name="🧭 Coordinates", value=f"x: {x}, z: {z}", inline=False)
+    
+        embed = discord.Embed(title=f"📍 {desc}", color=0x462f80)
+        coord_field = f"x: {x}, z: {z}" if y is None else f"x: {x}, y: {y}, z: {z}"
+        embed.add_field(name="🧭 Coordinates", value=coord_field, inline=False)
         embed.set_footer(text=f"Marked by {ctx.author.display_name} for {attributed.display_name}")
         await ctx.send(embed=embed)
+
     
     @mark_for.error
     async def markfor_error(self, ctx, error):
