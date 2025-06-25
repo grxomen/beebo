@@ -146,9 +146,6 @@ class RewardsCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-class ExtendedRewardsCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
 
     @commands.command(name="unlinkmc")
     async def unlinkmc(self, ctx):
@@ -259,4 +256,3 @@ class ExtendedRewardsCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(RewardsCog(bot))
-    await bot.add_cog(ExtendedRewardsCog(bot))
