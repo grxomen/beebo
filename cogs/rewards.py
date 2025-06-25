@@ -195,15 +195,28 @@ class ExtendedRewardsCog(commands.Cog):
         save_json(POOL_FILE, pool)
         await ctx.send(f"💸 Added **{amount:.2f}** credits. New pool balance: **{pool['credits']:.2f}**")
 
-    @commands.command(name="linkstatus")
-    async def linkstatus(self, ctx):
+    @commands.command(name="linkstatus", aliases=["mclink", "linked"])
+    async def link_status(self, ctx):
+        """Check your current linked Minecraft username and UUID."""
         links = load_json(LINK_FILE)
         user_data = links.get(str(ctx.author.id))
+    
         if not user_data:
-            await ctx.send("⚠️ You have no Minecraft account linked.")
+            await ctx.send("🔍 You haven't linked your Minecraft account yet. Use `!linkmc <username>` to do so.")
             return
+    
+        username = user_data.get("username", "Unknown")
+        uuid = user_data.get("uuid", "N/A")
+    
+        embed = discord.Embed(
+            title="🔗 Minecraft Link Status",
+            description=f"You are linked to **{username}**",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="UUID", value=uuid, inline=False)
+        embed.set_footer(text="Use !unlinkmc to disconnect if needed.")
+        await ctx.send(embed=embed)
 
-        await ctx.send(f"🔗 Linked to **{user_data['username']}** (UUID hidden for privacy).")
 
     @commands.command(name="devlinkmc")
     async def devlinkmc(self, ctx, member: discord.Member, mc_username: str):
