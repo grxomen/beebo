@@ -10,7 +10,8 @@ LINK_FILE = "data/mc_links.json"
 TIME_FILE = "data/mc_time.json"
 POOL_FILE = "data/credit_pool.json"
 PLAYTIME_FILE = "data/playtime_rewards.json"
-DEV_USER_ID = [448896936481652777, 858462569043722271]  # Replace with your own dev ID(s)
+REWARD_HISTORY_FILE = "data/reward_history.json"
+DEV_USER_ID = [448896936481652777, 858462569043722271]
 COOLDOWN_SECONDS = 60
 cooldowns = {}
 MC_LOG_CHANNEL_ID = 1387232069205233824
@@ -144,6 +145,97 @@ class RewardsCog(commands.Cog):
             embed.add_field(name=f"#{i}: {name}", value=f"{hours}h {minutes}m", inline=False)
 
         await ctx.send(embed=embed)
+
+class ExtendedRewardsCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="unlinkmc")
+    async def unlinkmc(self, ctx):
+        links = load_json(LINK_FILE)
+        user_id = str(ctx.author.id)
+        if user_id in links:
+            del links[user_id]
+            save_json(LINK_FILE, links)
+            await ctx.send("❎ Your Minecraft link has been removed.")
+        else:
+            await ctx.send("⚠️ You don't have a Minecraft account linked.")
+
+    @commands.command(name="rewardhistory")
+    async def rewardhistory(self, ctx):
+        history = load_json(REWARD_HISTORY_FILE)
+        user_id = str(ctx.author.id)
+        entries = history.get(user_id, [])
+        if not entries:
+            await ctx.send("📭 No reward history found.")
+            return
+
+        embed = discord.Embed(title="🎁 Reward History", color=0x462f80)
+        for entry in entries[-5:]:
+            embed.add_field(name=entry["reward"], value=f"<t:{entry['timestamp']}:R>", inline=False)
+        await ctx.send(embed=embed)
+
+    @commands.command(name="checkuuid")
+    async def checkuuid(self, ctx, mc_username: str):
+        url = f"https://api.mojang.com/users/profiles/minecraft/{mc_username}"
+        response = requests.get(url)
+        if response.status_code != 200:
+            await ctx.send(f"❌ No player found with name `{mc_username}`.")
+            return
+
+        data = response.json()
+        formatted_uuid = f"{data['id'][:8]}-{data['id'][8:12]}-{data['id'][12:16]}-{data['id'][16:20]}-{data['id'][20:]}"
+        await ctx.send(f"🆔 UUID for `{mc_username}` is `{formatted_uuid}`.")
+
+    @commands.command(name="pooladd")
+    @commands.has_permissions(administrator=True)
+    async def pooladd(self, ctx, amount: float):
+        pool = load_json(POOL_FILE)
+        pool["credits"] = pool.get("credits", 0.0) + amount
+        save_json(POOL_FILE, pool)
+        await ctx.send(f"💸 Added **{amount:.2f}** credits. New pool balance: **{pool['credits']:.2f}**")
+
+    @commands.command(name="linkstatus")
+    async def linkstatus(self, ctx):
+        links = load_json(LINK_FILE)
+        user_data = links.get(str(ctx.author.id))
+        if not user_data:
+            await ctx.send("⚠️ You have no Minecraft account linked.")
+            return
+
+        await ctx.send(f"🔗 Linked to **{user_data['username']}** (UUID hidden for privacy).")
+
+    @commands.command(name="devlinkmc")
+    async def devlinkmc(self, ctx, member: discord.Member, mc_username: str):
+        if ctx.author.id not in DEV_USER_ID:
+            await ctx.send("🚫 You don’t have permission to use this.")
+            return
+
+        url = f"https://api.mojang.com/users/profiles/minecraft/{mc_username}"
+        response = requests.get(url)
+        if response.status_code != 200:
+            await ctx.send(f"❌ Minecraft user `{mc_username}` not found.")
+            return
+
+        raw = response.json()["id"]
+        formatted_uuid = f"{raw[:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:]}"
+        links = load_json(LINK_FILE)
+        links[str(member.id)] = {
+            "username": mc_username,
+            "uuid": raw
+        }
+        save_json(LINK_FILE, links)
+
+        await ctx.send(f"🔧 Linked **{member.display_name}** to **{mc_username}**.")
+        log_channel = self.bot.get_channel(MC_LOG_CHANNEL_ID)
+        if log_channel:
+            embed = discord.Embed(title="🔐 Dev Linked MC", color=discord.Color.gold())
+            embed.add_field(name="Dev", value=ctx.author.mention, inline=False)
+            embed.add_field(name="Target User", value=member.mention, inline=False)
+            embed.add_field(name="MC Username", value=mc_username, inline=False)
+            embed.add_field(name="UUID", value=formatted_uuid, inline=False)
+            embed.set_footer(text="Manual link action")
+            await log_channel.send(embed=embed)
 
     # -- Pool Credits Check --
     @commands.command(name="pool", aliases=["creditpool", "donorpool"])
