@@ -259,3 +259,4 @@ class ExtendedRewardsCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(RewardsCog(bot))
+    await bot.add_cog(ExtendedRewardsCog(bot))
