@@ -395,6 +395,9 @@ class ExarotonCog(commands.Cog):
 
     @commands.command(name="status", aliases=["serverstatus"])
     async def server_status(self, ctx):
+        if await self.handle_cooldown(ctx):
+            return
+    
         headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
         url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
     
@@ -404,21 +407,29 @@ class ExarotonCog(commands.Cog):
             return
     
         data = response.json()
-    
         motd = data.get("motd", {}).get("clean", ["Unknown MOTD"])[0]
         online = data.get("host", {}).get("online", False)
-        players = data.get("players", {}).get("list", [])
+    
+        players_info = data.get("players", {})
+        player_list = players_info.get("list", [])
+        online_count = players_info.get("count", 0)
+        max_count = players_info.get("max", "?")
     
         embed = discord.Embed(
             title="Termite Server Status",
             description=f"**MOTD:** {motd}",
             color=discord.Color.green() if online else discord.Color.red()
         )
-        embed.add_field(name="Status", value="🟢 Online" if online else "<:beebo:1383282292478312519> Offline", inline=True)
-        if players:
-            embed.add_field(name="Players Online", value=f"{status.players.online}/{status.players.max}", inline=False)
-        else:
-            embed.add_field(name="Players Online", value="Nobody online.", inline=False)
+        embed.add_field(
+            name="Status",
+            value="🟢 Online" if online else "<:beebo:1383282292478312519> Offline",
+            inline=True
+        )
+        embed.add_field(
+            name="Players Online",
+            value=f"{online_count}/{max_count}\n" + (", ".join(player_list) if player_list else "Nobody online."),
+            inline=False
+        )
     
         await ctx.send(embed=embed)
 
