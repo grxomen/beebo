@@ -6,6 +6,7 @@ import re
 import asyncio
 import random
 import json
+import requests
 import logging
 from discord.ui import Button, View
 from discord.ext import commands, tasks
@@ -40,6 +41,7 @@ ATERNO_PASSWORD = os.getenv("ATERNO_PASSWORD")
 EXAROTON_EMAIL = os.getenv("EXAROTON_EMAIL")
 EXAROTON_PASSWORD = os.getenv("EXAROTON_PASSWORD")
 EXAROTON_TOKEN = os.getenv("EXAROTON_TOKEN")
+EXAROTON_SERVER_ID = os.getenv("EXAROTON_SERVER_ID")
 exaroton_client = Exaroton(EXAROTON_TOKEN)
 ANNOUNCEMENT_CHANNEL_ID = 1383563592447557722
 GUILD_ID = 1046624035464810496
