@@ -1,19 +1,25 @@
 import discord
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
+from discord.ext.commands import cooldown, BucketType, Context
 import json
 import time
+import requests
 import asyncio
 from typing import Union
 import os
+import datetime
 from playwright.async_api import async_playwright
-from utils import UtilsCog
+
 
 DATA_FILE = "data/exaroton_data.json"
 POOL_FILE = "data/exaroton_pool.json"
 DONOR_FILE = "data/exaroton_donations.json"
 donor_role_id = 1386101967297843270
 EXAROTON_TRUSTED = [448896936481652777, 546650815297880066, 858462569043722271]
+DEV_USER_ID = [546650815297880066, 448896936481652777, 424532190290771998, 858462569043722271]
+EXAROTON_TOKEN = os.getenv("EXAROTON_TOKEN")
+EXAROTON_SERVER_ID = os.getenv("EXAROTON_SERVER_ID")
 CHECK_INTERVAL_HOURS = 3
 
 def load_data(filename):
@@ -186,9 +192,24 @@ class ExarotonCog(commands.Cog):
         view = DonateButton(self.credit_pool_code)
         await ctx.send(embed=embed, view=view)
 
-    @commands.command(name="credits", aliases=["creds"])
+    @commands.command(name="credits", aliases=["excredits", "bal"])
     async def credits(self, ctx):
-        await ctx.send(f"💰 Current credit balance: **{self.credit_balance}** credits.")
+        headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+        response = requests.get("https://api.exaroton.com/v1/credits", headers=headers)
+
+        if response.status_code != 200:
+            await ctx.send("❌ Failed to fetch credit balance.")
+            return
+
+        credits = response.json().get("credits", 0.0)
+        embed = discord.Embed(
+            title="💳 Server Credit Balance",
+            description=f"You currently have **{credits:.2f}** Termite credits remaining.",
+            color=0x3d5e8e
+        )
+        embed.set_footer(text="Keep it running <:beebo:1383282292478312519>")
+        await ctx.send(embed=embed)
+
 
     @commands.command(name="add", aliases=["grant"])
     @commands.is_owner()
@@ -248,6 +269,36 @@ class ExarotonCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(name="burnrate", aliases=["burnstats", "projected"])
+    async def burnrate(self, ctx):
+        headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+        response = requests.get(f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}", headers=headers)
+
+        if response.status_code != 200:
+            await ctx.send("❌ Couldn't fetch server details.")
+            return
+
+        server = response.json()
+        if server.get("creditsPerHour") is None:
+            await ctx.send("⚠️ Server burn rate data is unavailable.")
+            return
+
+        rate = server["creditsPerHour"]
+        balance = server.get("credits", 0.0)
+        projected_hours = balance / rate if rate > 0 else 0
+
+        embed = discord.Embed(
+            title="🔥 Burn Rate & Projections",
+            color=0xdb4437,
+            description=(
+                f"• Burn Rate: **{rate:.2f}** credits/hour\n"
+                f"• Balance: **{balance:.2f}** credits\n"
+                f"• Estimated Time Left: **{projected_hours:.2f} hours**"
+            )
+        )
+        embed.set_footer(text="Based on current usage pattern")
+        await ctx.send(embed=embed)
+
     @commands.command(name="setdonation", aliases=["setdono", "forceadd"])
     @commands.is_owner()
     async def set_donation(self, ctx, user: Union[discord.Member, discord.User, str], amount: float):
@@ -300,6 +351,62 @@ class ExarotonCog(commands.Cog):
         if not code:
             await ctx.send("❌ No credit pool link set.")
             return
+        
+    @commands.command(name="uptime")
+    @commands.cooldown(2, 300, BucketType.guild)
+    async def server_uptime(self, ctx):
+        if ctx.author.id not in DEV_USER_ID:
+            await ctx.send("🚫 You don't have permission to use this command.")
+            return
+    
+        headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+        url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
+
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            await ctx.send("❌ Could not retrieve server uptime.")
+            return
+
+        data = response.json()
+        time_started = data.get("server", {}).get("timeStarted")
+
+        if not time_started:
+            await ctx.send("⚠️ Server is not online or uptime not available.")
+            return
+
+        started_dt = datetime.fromisoformat(time_started.replace("Z", "+00:00"))
+        now = datetime.utcnow()
+        uptime = now - started_dt
+        hours, remainder = divmod(int(uptime.total_seconds()), 3600)
+        minutes, _ = divmod(remainder, 60)
+
+        await ctx.send(f"<:beebo:1383282292478312519> Termite has been online for **{hours}h {minutes}m**.")
+
+    @commands.command(name="mcstatus", aliases=["mcs"])
+    async def server_status(self, ctx):
+        headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+        url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
+
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            await ctx.send("❌ Failed to fetch server status from Exaroton.")
+            return
+
+        data = response.json()
+        server = data.get("server", {})
+
+        motd = server.get("motd", {}).get("clean", ["No MOTD"])[0]
+        online = server.get("host", {}).get("online", False)
+        players = server.get("players", {}).get("list", [])
+
+        embed = discord.Embed(
+            title="<:beebo:1383282292478312519> Minecraft Server Status",
+            description=f"**{motd}**",
+            color=0x2ecc71 if online else 0xe74c3c
+        )
+        embed.add_field(name="Status", value="🟢 Online" if online else "🔴 Offline", inline=True)
+        embed.add_field(name="Players Online", value=", ".join(players) if players else "Nobody online", inline=False)
+        await ctx.send(embed=embed)
 
         # ─── Dev Bypass ─────────────────────────────
         if user_id == 546650815297880066:
