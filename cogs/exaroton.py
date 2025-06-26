@@ -77,24 +77,36 @@ class ExarotonCog(commands.Cog):
     @tasks.loop(hours=CHECK_INTERVAL_HOURS)
     async def check_server_status(self):
         channel = self.bot.get_channel(self.channel_id)
-        server = JavaServer.lookup(self.server_address)
-
+    
+        headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+        url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
+    
         try:
-            status = server.status()
-
-            if self.last_status == "offline":
-                embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0x462f80)
+            response = requests.get(url, headers=headers)
+            if response.status_code != 200:
+                print("[Exaroton API] Failed to fetch status.")
+                return
+    
+            data = response.json()
+            online = data.get("host", {}).get("online", False)
+            status_code = data.get("status")
+            players = data.get("players", {}).get("list", [])
+            motd = data.get("motd", {}).get("clean", [""])[0]
+    
+            if status_code == 2 and self.last_status != "online":
+                embed = discord.Embed(title="🟢 **Termite Server is ONLINE!**", color=0x462f80)
+                embed.add_field(name="MOTD", value=motd or "Server Online", inline=False)
                 embed.add_field(name="Java IP", value=self.server_address, inline=False)
-                embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=False)
-
-                if status.players.online > 0:
-                    players = ', '.join([p.name for p in status.players.sample]) if status.players.sample else "Unknown players"
-                    embed.add_field(name="Who's Online", value=players, inline=False)
-
-                embed.set_footer(text="Summon the squad before Exaroton falls asleep.")
+                embed.add_field(name="Players", value=str(len(players)), inline=False)
+    
+                if players:
+                    embed.add_field(name="Who's Online", value="\n".join(players), inline=False)
+    
+                embed.set_footer(text="Summon the squad.")
                 await channel.send(content=self.role_to_tag, embed=embed)
                 self.last_status = "online"
-
+    
+                # Check credits
                 if self.credit_balance <= 200:
                     try:
                         warn_embed = discord.Embed(
@@ -109,20 +121,19 @@ class ExarotonCog(commands.Cog):
                         await channel.send(embed=warn_embed, view=view)
                     except Exception as e:
                         print(f"[⚠️ Burn Warning Error] {e}")
-
-            else:
-                print("[Status Check] Server still online, no alert sent.")
-
-        except Exception as e:
-            print(f"[🔻 Server Down Check] {e}")
-            if self.last_status == "online":
+    
+            elif status_code != 2 and self.last_status != "offline":
                 embed = discord.Embed(
-                    title="**Minecraft Server is OFFLINE or SLEEPING**",
+                    title="🔴 **Minecraft Server is OFFLINE or SLEEPING**",
                     color=0xff5555
                 )
                 embed.set_footer(text="Someone needs to manually start it or join to wake it up.")
                 await channel.send(content=self.role_to_tag, embed=embed)
-            self.last_status = "offline"
+                self.last_status = "offline"
+    
+        except Exception as e:
+            print(f"[🔥 Server Status Error] {e}")
+
 
     @commands.command()
     @commands.is_owner()
@@ -382,30 +393,33 @@ class ExarotonCog(commands.Cog):
 
         await ctx.send(f"<:beebo:1383282292478312519> Termite has been online for **{hours}h {minutes}m**.")
 
-    @commands.command(name="mcstatus", aliases=["mcs"])
+    @commands.command(name="status", aliases=["serverstatus"])
     async def server_status(self, ctx):
         headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
         url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
-
+    
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             await ctx.send("❌ Failed to fetch server status from Exaroton.")
             return
-
+    
         data = response.json()
-        server = data.get("server", {})
-
-        motd = server.get("motd", {}).get("clean", ["No MOTD"])[0]
-        online = server.get("host", {}).get("online", False)
-        players = server.get("players", {}).get("list", [])
-
+    
+        motd = data.get("motd", {}).get("clean", ["Unknown MOTD"])[0]
+        online = data.get("host", {}).get("online", False)
+        players = data.get("players", {}).get("list", [])
+    
         embed = discord.Embed(
-            title="<:beebo:1383282292478312519> Minecraft Server Status",
-            description=f"**{motd}**",
-            color=0x2ecc71 if online else 0xe74c3c
+            title="🪳 Termite Server Status",
+            description=f"**MOTD:** {motd}",
+            color=discord.Color.green() if online else discord.Color.red()
         )
-        embed.add_field(name="Status", value="🟢 Online" if online else "🔴 Offline", inline=True)
-        embed.add_field(name="Players Online", value=", ".join(players) if players else "Nobody online", inline=False)
+        embed.add_field(name="Status", value="🟢 Online" if online else "<:beebo:1383282292478312519> Offline", inline=True)
+        if players:
+            embed.add_field(name="Players Online", value="\n".join(players), inline=False)
+        else:
+            embed.add_field(name="Players Online", value="Nobody online.", inline=False)
+    
         await ctx.send(embed=embed)
 
         # ─── Dev Bypass ─────────────────────────────
