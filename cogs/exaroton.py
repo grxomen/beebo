@@ -416,7 +416,7 @@ class ExarotonCog(commands.Cog):
         )
         embed.add_field(name="Status", value="🟢 Online" if online else "<:beebo:1383282292478312519> Offline", inline=True)
         if players:
-            embed.add_field(name="Players Online", value="\n".join(players), inline=False)
+            embed.add_field(name="Players Online", value=f"{status.players.online}/{status.players.max}", inline=False)
         else:
             embed.add_field(name="Players Online", value="Nobody online.", inline=False)
     
