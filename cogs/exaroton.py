@@ -7,6 +7,7 @@ import asyncio
 from typing import Union
 import os
 from playwright.async_api import async_playwright
+from utils import UtilsCog
 
 DATA_FILE = "data/exaroton_data.json"
 POOL_FILE = "data/exaroton_pool.json"
