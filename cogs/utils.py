@@ -1,13 +1,15 @@
 import discord
 from discord.ext import commands
 import time
+from typing import List, Tuple
+
 
 class UtilsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.cooldowns = {}  # {(user_id, command_name): [timestamp, warned]}
 
-    def check_command_cooldown(self, user_id: int, command_name: str, cooldown_time: int, dev_ids: list[int]) -> (bool, str):
+    def check_command_cooldown(self, user_id: int, command_name: str, cooldown_time: int, dev_ids: List[int]) -> Tuple[bool, str]:
         """
         Check cooldown for a user-command pair.
         Returns:
