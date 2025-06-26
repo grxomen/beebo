@@ -71,7 +71,7 @@ class AdminCog(commands.Cog):
             embed.add_field(name="Players Online", value="<:beebo:1383282292478312519> No one currently online.", inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command(name="uptime", aliases=["serveruptime"])
+    @commands.command(name="serveruptime", aliases=["serverun"])
     async def server_uptime(self, ctx):
         if await self.handle_cooldown(ctx):
             return
