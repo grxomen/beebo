@@ -48,29 +48,6 @@ class AdminCog(commands.Cog):
             self.update_cooldown(user_id)
             return False
 
-    @commands.command(name="status", aliases=["serverstatus"])
-    async def server_status(self, ctx):
-        if await self.handle_cooldown(ctx):
-            return
-
-        data = get_server_data()
-        if not data:
-            await ctx.send("❌ Failed to retrieve server data.")
-            return
-
-        status = data.get("statusText", "Unknown")
-        players = data.get("players", {}).get("list", [])
-        embed = discord.Embed(
-            title="<:beebo:1383282292478312519> Termite Server Status",
-            description=f"**Status:** {status}",
-            color=discord.Color.green() if status.lower() == "online" else discord.Color.red()
-        )
-        if players:
-            embed.add_field(name="<:beebo:1383282292478312519> Players Online", value="\n".join(players), inline=False)
-        else:
-            embed.add_field(name="Players Online", value="<:beebo:1383282292478312519> No one currently online.", inline=False)
-        await ctx.send(embed=embed)
-
     @commands.command(name="serveruptime", aliases=["serverun"])
     async def server_uptime(self, ctx):
         if await self.handle_cooldown(ctx):
