@@ -352,7 +352,7 @@ class ExarotonCog(commands.Cog):
             await ctx.send("❌ No credit pool link set.")
             return
         
-    @commands.command(name="uptime")
+    @commands.command(name="up")
     @commands.cooldown(2, 300, BucketType.guild)
     async def server_uptime(self, ctx):
         if ctx.author.id not in DEV_USER_ID:
