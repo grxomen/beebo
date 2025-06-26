@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from utils import UtilsCog
+from cogs.utils import UtilsCog
 import requests
 import os
 import time
