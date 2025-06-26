@@ -103,25 +103,32 @@ async def check_server_status():
             await channel.send(content="<@&1368225900486721616>", embed=embed)
         last_status = "offline"
 
-@bot.command(aliases=["status", "serverstatus"])
-async def mcstatus(ctx):
-    server = JavaServer.lookup(SERVER_ADDRESS)
-    try:
-        status = server.status()
-        embed = discord.Embed(title="**Minecraft Server Status**", color=0x00ff00)
-        embed.add_field(name="Status", value="ONLINE", inline=True)
-        embed.add_field(name="Players", value=f"{status.players.online}/{status.players.max}", inline=True)
+@commands.command(name="status")
+async def server_status(self, ctx):
+    headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+    url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
 
-        if status.players.online > 0:
-            players = ', '.join([player.name for player in status.players.sample]) if status.players.sample else "Players hidden"
-            embed.add_field(name="Who's Online", value=players, inline=False)
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        await ctx.send("❌ Failed to fetch server status from Exaroton.")
+        return
 
-        await ctx.send(embed=embed)
-    except:
-        embed = discord.Embed(title="**Termite Server Status**", color=0xff0000)
-        embed.add_field(name="Status", value="OFFLINE or Sleeping", inline=True)
-        embed.set_footer(text="Reminder: Termite server needs manual starting.")
-        await ctx.send(embed=embed)
+    data = response.json()
+    server = data.get("server", {})
+
+    motd = server.get("motd", {}).get("clean", ["No MOTD"])[0]
+    online = server.get("host", {}).get("online", False)
+    players = server.get("players", {}).get("list", [])
+
+    embed = discord.Embed(
+        title="<:beebo:1383282292478312519> Termite Server Status",
+        description=f"**{motd}**",
+        color=0x2ecc71 if online else 0xe74c3c
+    )
+    embed.add_field(name="Status", value="🟢 Online" if online else "<:beebo:1383282292478312519> Offline", inline=True)
+    embed.add_field(name="Players Online", value=", ".join(players) if players else "Nobody online", inline=False)
+    await ctx.send(embed=embed)
+
 
 @bot.command()
 async def listcommands(ctx):
