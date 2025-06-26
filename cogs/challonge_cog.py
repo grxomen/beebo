@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import aiohttp, os, json
-from utils import UtilsCog
+from cogs.utils import UtilsCog
 
 MAP_FILE = "data/tourney_map.json"
 SCORE_FILE = "data/tourney_scores.json"
