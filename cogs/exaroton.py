@@ -410,7 +410,7 @@ class ExarotonCog(commands.Cog):
         players = data.get("players", {}).get("list", [])
     
         embed = discord.Embed(
-            title="🪳 Termite Server Status",
+            title="Termite Server Status",
             description=f"**MOTD:** {motd}",
             color=discord.Color.green() if online else discord.Color.red()
         )
