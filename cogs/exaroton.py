@@ -372,25 +372,25 @@ class ExarotonCog(commands.Cog):
     
         headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
         url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
-
+    
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             await ctx.send("❌ Could not retrieve server uptime.")
             return
-
+    
         data = response.json()
-        time_started = data.get("server", {}).get("timeStarted")
-
+        time_started = data.get("timeStarted")
+    
         if not time_started:
             await ctx.send("⚠️ Server is not online or uptime not available.")
             return
-
+    
         started_dt = datetime.fromisoformat(time_started.replace("Z", "+00:00"))
         now = datetime.utcnow()
         uptime = now - started_dt
         hours, remainder = divmod(int(uptime.total_seconds()), 3600)
         minutes, _ = divmod(remainder, 60)
-
+    
         await ctx.send(f"<:beebo:1383282292478312519> Termite has been online for **{hours}h {minutes}m**.")
 
     @commands.command(name="status", aliases=["serverstatus"])
