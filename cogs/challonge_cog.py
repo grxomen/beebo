@@ -108,6 +108,27 @@ class ChallongeCog(commands.Cog):
         })
         save_json(MATCH_HISTORY_FILE, history)
 
+    @commands.command()
+    async def standings(self, ctx):
+        scores = load_json(ELO_FILE)
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    
+        embed = discord.Embed(title="📊 Global ELO Standings", color=0xffcc00)
+        for rank, (uid, elo) in enumerate(sorted_scores[:20], start=1):
+            member = ctx.guild.get_member(int(uid))
+            name = member.display_name if member else f"<@{uid}>"
+            embed.add_field(name=f"{rank}. {name}", value=f"ELO: **{elo}**", inline=False)
+    
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @commands.is_owner()
+    async def set_elo(self, ctx, member: discord.Member, new_score: int):
+        scores = load_json(ELO_FILE)
+        scores[str(member.id)] = new_score
+        save_json(ELO_FILE, scores)
+        await ctx.send(f"📌 Set ELO of {member.display_name} to **{new_score}**.")
+
     @commands.command(aliases=["sm"])
     async def sync_matches(self, ctx, slug: str):
         await self.alert_matches(ctx.guild, slug)
