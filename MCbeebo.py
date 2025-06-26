@@ -1133,6 +1133,7 @@ async def main():
     await bot.load_extension("cogs.exaroton")
     await bot.load_extension("cogs.pinpoint")
     await bot.load_extension("cogs.rewards")
+    await bot.load_extension("cogs.utils")
     await bot.start(TOKEN)
 
 asyncio.run(main())
