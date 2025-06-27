@@ -32,15 +32,15 @@ class PinPoint(commands.Cog):
         self.bot = bot
 
     @commands.command(name="mark")
-    async def mark(self, ctx, x: int, z: int, y_or_desc: str, *, description: str = None):
-        """Mark a location for yourself, with optional Y coordinate."""
+    async def mark(self, ctx, x: int, y_or_desc: str, z: int, *, description: str = None):
+        """Mark a location with optional Y coordinate. Usage: !mark x y z desc OR !mark x desc z"""
         try:
             y = int(y_or_desc)
             desc = description
         except ValueError:
             y = None
             desc = f"{y_or_desc} {description}" if description else y_or_desc
-    
+
         pins = load_pins()
         pin_id = str(max([int(k) for k in pins.keys()] + [0]) + 1)
         timestamp = datetime.utcnow().isoformat()
@@ -49,8 +49,8 @@ class PinPoint(commands.Cog):
     
         pins[pin_id] = {
             "x": x,
+            "y": y,
             "z": z,
-            "y": y,  # Optional
             "description": desc,
             "submitter_id": submitter_id,
             "attributed_user_id": attributed_id,
@@ -71,19 +71,32 @@ class PinPoint(commands.Cog):
         if not pins:
             await ctx.send("📭 No pins found.")
             return
-
+    
         embed = discord.Embed(title="📌 Recent Pins", color=0x462f80)
-        for pid in sorted(pins, key=lambda k: int(k))[-5:]:
-            p = pins[pid]
-            user = self.bot.get_user(int(p["attributed_user_id"])) or f"<@{p['attributed_user_id']}>"
-            embed.add_field(name=f"📍 {p['description']} (ID {pid})",
-                            value=f"x: {p['x']}, z: {p['z']} — by {user}",
-                            inline=False)
+    
+        recent = sorted(pins.items(), key=lambda item: int(item[0]))[-5:]
+        for pid, p in recent:
+            user_id = int(p["attributed_user_id"])
+            user = self.bot.get_user(user_id)
+            user_mention = user.mention if user else f"<@{user_id}>"
+    
+            # Build coordinate string
+            coords = f"x: {p['x']}, z: {p['z']}"
+            if p.get("y") is not None:
+                coords = f"x: {p['x']}, y: {p['y']}, z: {p['z']}"
+    
+            embed.add_field(
+                name=f"📍 {p['description']} (ID {pid})",
+                value=f"{coords} — submitted by {user_mention}",
+                inline=False
+            )
+    
         await ctx.send(embed=embed)
+
 
     @commands.command(name="markfor")
     @commands.has_permissions(administrator=True)
-    async def mark_for(self, ctx, attributed: discord.Member, x: int, z: int, y_or_desc: str, *, description: str = None):
+    async def mark_for(self, ctx, attributed: discord.Member, x: int, y_or_desc: str, z: int, *, description: str = None):
         """Add a pin for another user (admin/dev-only)."""
         try:
             y = int(y_or_desc)
@@ -97,8 +110,8 @@ class PinPoint(commands.Cog):
     
         pins[pin_id] = {
             "x": x,
+            "y": y,
             "z": z,
-            "y": y,  # Optional
             "description": desc,
             "submitter_id": str(ctx.author.id),
             "attributed_user_id": str(attributed.id),
@@ -109,9 +122,12 @@ class PinPoint(commands.Cog):
     
         embed = discord.Embed(title=f"📍 {desc}", color=0x462f80)
         coord_field = f"x: {x}, z: {z}" if y is None else f"x: {x}, y: {y}, z: {z}"
+        attributed_display = attributed.display_name if hasattr(attributed, "display_name") else attributed
+        
         embed.add_field(name="🧭 Coordinates", value=coord_field, inline=False)
-        embed.set_footer(text=f"Marked by {ctx.author.display_name} for {attributed.display_name}")
+        embed.set_footer(text=f"Marked by {ctx.author.display_name} for {attributed_display}")
         await ctx.send(embed=embed)
+
 
     
     @mark_for.error
@@ -131,14 +147,26 @@ class PinPoint(commands.Cog):
         if not pin:
             await ctx.send("❌ Pin not found.")
             return
-        submitter = self.bot.get_user(SUBMITTER_MAP.get(pin["submitter_id"], 0)) or f"<@{pin['submitter_id']}>"
-        attributed = self.bot.get_user(int(pin["attributed_user_id"])) or f"<@{pin['attributed_user_id']}>"
+    
+        # Fallbacks if user not in cache
+        submitter_id = int(pin["submitter_id"])
+        attributed_id = int(pin["attributed_user_id"])
+        submitter = self.bot.get_user(submitter_id)
+        attributed = self.bot.get_user(attributed_id)
+        submitter_display = submitter.mention if submitter else f"<@{submitter_id}>"
+        attributed_display = attributed.mention if attributed else f"<@{attributed_id}>"
+    
+        coords = f"x: {pin['x']}, z: {pin['z']}"
+        if pin.get("y") is not None:
+            coords = f"x: {pin['x']}, y: {pin['y']}, z: {pin['z']}"
+    
         embed = discord.Embed(title=f"📍 {pin['description']}", color=0x462f80)
-        embed.add_field(name="🧭 Coordinates", value=f"x: {pin['x']}, z: {pin['z']}", inline=False)
-        embed.add_field(name="👤 Submitted by", value=f"{submitter}", inline=True)
-        embed.add_field(name="🙋 Attributed to", value=f"{attributed}", inline=True)
+        embed.add_field(name="🧭 Coordinates", value=coords, inline=False)
+        embed.add_field(name="👤 Submitted by", value=submitter_display, inline=True)
+        embed.add_field(name="🙋 Attributed to", value=attributed_display, inline=True)
         embed.set_footer(text=f"Pin ID: {pin_id} • {pin['timestamp']}")
         await ctx.send(embed=embed)
+
 
     @commands.command(name="filterpins")
     async def filterpins(self, ctx, *, query: str):
