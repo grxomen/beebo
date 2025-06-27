@@ -131,7 +131,7 @@ async def server_status(self, ctx):
         minutes, _ = divmod(remainder, 60)
         uptime_str = f"{hours}h {minutes}m"
 
-    # Get live server status via mcstatus
+    # Get live server status via status
     try:
         server = JavaServer.lookup(SERVER_ADDRESS)  # example: termite.exaroton.me
         status = server.status()
@@ -751,7 +751,7 @@ async def debugstatus(ctx):
 @bot.command(aliases=["bhelp", "beebohelp"])
 async def help(ctx):
     embed = discord.Embed(title="Beebo Command List", color=0xb0c0ff)
-    embed.add_field(name="!mcstatus / !status", value="Check if the Minecraft server is online and who's on.", inline=False)
+    embed.add_field(name="!status", value="Check if the Minecraft server is online and who's on.", inline=False)
     embed.add_field(name="!pingoffline / !offping", value="If the server is offline, alert the squad to start it.", inline=False)
     embed.add_field(name="!startserver / !awake", value="Attempts to start the server using Exaroton (restricted to ☁️ �𝓿𝓲𝓼𝓬𝓵𝓸𝓾𝓭 role).", inline=False)
     embed.add_field(name="!say / !talk / !bcast", value="Send a custom message with an embed and ping MCSquad (restricted).", inline=False)
@@ -1071,7 +1071,7 @@ async def send_versionfix_embed(channel):
             "2. Go to `Installations`\n"
             "3. Create or select version `1.21.X`\n"
             "4. Launch it and join!\n\n"
-            "_Need help?_ Use `!mcstatus` or ping a staff member."
+            "_Need help?_ Use `!status` or ping a staff member."
         ),
         color=0xffc300
     )
