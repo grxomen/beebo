@@ -393,6 +393,14 @@ class ExarotonCog(commands.Cog):
     
         await ctx.send(f"<:beebo:1383282292478312519> Termite has been online for **{hours}h {minutes}m**.")
 
+    async def handle_cooldown(self, ctx):
+        bucket = commands.CooldownMapping.from_cooldown(1, 60, commands.BucketType.user).get_bucket(ctx.message)
+        retry_after = bucket.update_rate_limit()
+        if retry_after:
+            await ctx.send(f"🕒 Slow down! Try again in `{int(retry_after)}s`.")
+            return True
+        return False
+    
     @commands.command(name="status", aliases=["serverstatus"])
     async def server_status(self, ctx):
         if await self.handle_cooldown(ctx):
