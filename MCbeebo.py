@@ -105,8 +105,8 @@ async def check_server_status():
             await channel.send(content="<@&1368225900486721616>", embed=embed)
         last_status = "offline"
 
-@commands.command(name="status", aliases=["serverstatus"])
-async def server_status(self, ctx):
+@commands.command(name="mcstatus", aliases=["mcserverstatus"])
+async def mcserver_status(self, ctx):
     await ctx.trigger_typing()
 
     headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
