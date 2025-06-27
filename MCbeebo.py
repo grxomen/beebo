@@ -105,30 +105,53 @@ async def check_server_status():
             await channel.send(content="<@&1368225900486721616>", embed=embed)
         last_status = "offline"
 
-@commands.command(name="status")
+@commands.command(name="status", aliases=["serverstatus"])
 async def server_status(self, ctx):
     headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
     url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
-
+    
+    # Pull Exaroton API data
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
         await ctx.send("❌ Failed to fetch server status from Exaroton.")
         return
 
     data = response.json()
-    server = data.get("server", {})
+    motd = data.get("motd", {}).get("clean", ["Unknown MOTD"])[0]
+    status_text = data.get("statusText", "Offline")
+    time_started = data.get("timeStarted")
 
-    motd = server.get("motd", {}).get("clean", ["No MOTD"])[0]
-    online = server.get("host", {}).get("online", False)
-    players = server.get("players", {}).get("list", [])
+    # Calculate uptime
+    uptime_str = "Unavailable"
+    if time_started:
+        started_dt = datetime.fromisoformat(time_started.replace("Z", "+00:00"))
+        now = datetime.utcnow()
+        uptime = now - started_dt
+        hours, remainder = divmod(int(uptime.total_seconds()), 3600)
+        minutes, _ = divmod(remainder, 60)
+        uptime_str = f"{hours}h {minutes}m"
+
+    # Get live server status via mcstatus
+    try:
+        server = JavaServer.lookup(SERVER_ADDRESS)  # example: termite.exaroton.me
+        status = server.status()
+        online_players = [p.name for p in status.players.sample] if status.players.sample else []
+        players_str = ", ".join(online_players) if online_players else "Nobody online"
+        player_count_str = f"{status.players.online}/{status.players.max}"
+    except Exception:
+        players_str = "Unavailable"
+        player_count_str = "?"
 
     embed = discord.Embed(
         title="<:beebo:1383282292478312519> Termite Server Status",
-        description=f"**{motd}**",
-        color=0x2ecc71 if online else 0xe74c3c
+        description=f"**MOTD:** {motd}",
+        color=discord.Color.green() if status_text.lower() == "online" else discord.Color.red()
     )
-    embed.add_field(name="Status", value="🟢 Online" if online else "<:beebo:1383282292478312519> Offline", inline=True)
-    embed.add_field(name="Players Online", value=", ".join(players) if players else "Nobody online", inline=False)
+    embed.add_field(name="Status", value=f"🟢 {status_text}", inline=True)
+    embed.add_field(name="Uptime", value=uptime_str, inline=True)
+    embed.add_field(name="Players Online", value=f"{player_count_str}", inline=False)
+    embed.add_field(name="Who's Online", value=players_str, inline=False)
+    await ctx.send(embed=embed)Online", value=", ".join(players) if players else "Nobody online", inline=False)
     await ctx.send(embed=embed)
 
 
