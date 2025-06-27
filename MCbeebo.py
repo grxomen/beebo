@@ -82,7 +82,7 @@ async def check_server_status():
     server = JavaServer.lookup(SERVER_ADDRESS)
 
     try:
-        status = server.status(retries=1)
+        status = server.status()
         if last_status == "offline":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
             embed.add_field(name="Java IP", value="termite.exaroton.me", inline=False)
@@ -107,16 +107,20 @@ async def check_server_status():
 
 @commands.command(name="status", aliases=["serverstatus"])
 async def server_status(self, ctx):
+    await ctx.trigger_typing()
+
     headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
     url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
-    
-    # Pull Exaroton API data
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        print(f"[Exaroton API Error] {e}")
         await ctx.send("❌ Failed to fetch server status from Exaroton.")
         return
 
-    data = response.json()
     motd = data.get("motd", {}).get("clean", ["Unknown MOTD"])[0]
     status_text = data.get("statusText", "Offline")
     time_started = data.get("timeStarted")
@@ -124,17 +128,20 @@ async def server_status(self, ctx):
     # Calculate uptime
     uptime_str = "Unavailable"
     if time_started:
-        started_dt = datetime.fromisoformat(time_started.replace("Z", "+00:00"))
-        now = datetime.utcnow()
-        uptime = now - started_dt
-        hours, remainder = divmod(int(uptime.total_seconds()), 3600)
-        minutes, _ = divmod(remainder, 60)
-        uptime_str = f"{hours}h {minutes}m"
+        try:
+            started_dt = datetime.fromisoformat(time_started.replace("Z", "+00:00"))
+            now = datetime.utcnow()
+            uptime = now - started_dt
+            hours, remainder = divmod(int(uptime.total_seconds()), 3600)
+            minutes, _ = divmod(remainder, 60)
+            uptime_str = f"{hours}h {minutes}m"
+        except Exception as e:
+            print(f"[Uptime Parse Error] {e}")
 
-    # Get live server status via status
+    # Try JavaServer status check
     try:
-        server = JavaServer.lookup(SERVER_ADDRESS)  # example: termite.exaroton.me
-        status = server.status()
+        server = JavaServer.lookup(SERVER_ADDRESS)
+        status = server.status(retries=1)
         online_players = [p.name for p in status.players.sample] if status.players.sample else []
         players_str = ", ".join(online_players) if online_players else "Nobody online"
         player_count_str = f"{status.players.online}/{status.players.max}"
@@ -154,6 +161,11 @@ async def server_status(self, ctx):
     embed.add_field(name="Who's Online", value=players_str, inline=False)
 
     await ctx.send(embed=embed)
+
+
+    await ctx.send(embed=embed)
+    print(json.dumps(data, indent=2))
+
 
 
 
