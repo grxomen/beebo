@@ -4,10 +4,12 @@ from discord.ui import View, Button
 import aiohttp, os, json
 from cogs.utils import UtilsCog
 
+
 MAP_FILE = "data/tourney_map.json"
 SCORE_FILE = "data/tourney_scores.json"
 ELO_FILE = "data/elo_scores.json"
 MATCH_HISTORY_FILE = "data/match_history.json"
+ARCHIVE_FILE = "data/archived_slugs.json"
 ALERT_CACHE = "data/alerted_matches.json"
 OPTOUT_FILE = "data/match_ping_optouts.json"
 LOG_CHANNEL_ID = 1366761199949054013
@@ -128,6 +130,75 @@ class ChallongeCog(commands.Cog):
         scores[str(member.id)] = new_score
         save_json(ELO_FILE, scores)
         await ctx.send(f"📌 Set ELO of {member.display_name} to **{new_score}**.")
+        
+
+    @commands.command(aliases=["unslug", "forgetslug", "purge_slug"])
+    @commands.is_owner()
+    async def remove_slug(self, ctx, slug: str):
+        """Safely archive and purge a tournament slug (with confirmation)."""
+        tourney_map = load_json(MAP_FILE)
+        match_history = load_json(MATCH_HISTORY_FILE)
+        elo_scores = load_json(ELO_FILE)
+        archive = load_json(ARCHIVE_FILE)
+    
+        if slug not in tourney_map:
+            await ctx.send(f"❌ `{slug}` isn’t currently tracked.")
+            return
+    
+        # Button confirmation UI
+        class ConfirmView(View):
+            def __init__(self):
+                super().__init__(timeout=15)
+                self.confirmed = False
+    
+            @discord.ui.button(label="Yes, purge it", style=discord.ButtonStyle.danger)
+            async def confirm(self, interaction: discord.Interaction, button: Button):
+                if interaction.user.id != ctx.author.id:
+                    await interaction.response.send_message("Not your nuke to launch. 🧨", ephemeral=True)
+                    return
+                self.confirmed = True
+                await interaction.response.edit_message(content="⏳ Purging in progress...", view=None)
+                self.stop()
+    
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+            async def cancel(self, interaction: discord.Interaction, button: Button):
+                await interaction.response.edit_message(content="❌ Purge cancelled. Slug is safe.", view=None)
+                self.stop()
+    
+        view = ConfirmView()
+        await ctx.send(
+            f"⚠️ Are you **sure** you want to purge `{slug}`?\nThis will:\n"
+            "- Remove it from tracking\n"
+            "- Archive it safely\n"
+            "- Wipe related match history\n"
+            "- Clean ELO entries for involved users\n\nChoose wisely.",
+            view=view
+        )
+    
+        await view.wait()
+    
+        if not view.confirmed:
+            return  # User canceled or timed out
+    
+        # Archive the slug and its player map
+        archive[slug] = tourney_map[slug]
+        save_json(ARCHIVE_FILE, archive)
+    
+        # Delete from MAP_FILE
+        del tourney_map[slug]
+        save_json(MAP_FILE, tourney_map)
+    
+        # Delete match history
+        if slug in match_history:
+            del match_history[slug]
+            save_json(MATCH_HISTORY_FILE, match_history)
+    
+        # Clean up ELO scores
+        for uid in archive[slug].keys():
+            elo_scores.pop(uid, None)
+        save_json(ELO_FILE, elo_scores)
+    
+        await ctx.send(f"✅ `{slug}` has been **purged and archived**. No longer tracked. 🪦")
 
     @commands.command(aliases=["sm"])
     async def sync_matches(self, ctx, slug: str):
