@@ -449,24 +449,88 @@ class ChallongeCog(commands.Cog):
         else:
             await ctx.send(f"❌ Failed to confirm result: {data.get('errors') or data}")
 
-    @commands.command(aliases=["ctour", "newtour"])
+    @commands.command(aliases=["ct", "ctour", "newtour"])
     @commands.is_owner()
-    async def create_tourney(self, ctx, slug: str, *, name: str):
-        """Create a new tournament on Challonge."""
+    async def create_tourney(self, ctx, slug: str, t_type: str = "single", *, tail: str = ""):
+        """Create a new tournament. Optional: preload members from a role.
+        Usage: !ct slug-name round My Tourney Name @RoleToAdd
+        """
+        role = None
+        name = tail
+
+        # If last token is a role mention, parse it out
+        if ctx.message.role_mentions:
+            role = ctx.message.role_mentions[-1]
+            name = tail.replace(role.mention, "").strip()
+
+        name = name or slug.replace("-", " ").title()
+        t_type_map = {
+            "single": "single elimination",
+            "double": "double elimination",
+            "round": "round robin"
+        }
+        selected_type = t_type_map.get(t_type.lower())
+
+        if not selected_type:
+            await ctx.send("❌ Invalid tournament type. Use: `single`, `double`, or `round`.")
+            return
+
         payload = {
             "tournament": {
                 "name": name,
                 "url": slug,
-                "tournament_type": "single elimination",  # can also be "double elimination", etc.
-                "open_signup": False
+                "tournament_type": selected_type,
+                "open_signup": False,
+                "private": True
             }
         }
 
         data, status = await self.request("POST", "tournaments", json=payload)
-        if status == 200:
-            await ctx.send(f"✅ Tournament **{name}** created with slug `{slug}`.\nLink: https://challonge.com/{slug}")
-        else:
-            await ctx.send(f"❌ Failed to create tournament: {data.get('errors') or data}")
+
+        if status != 200:
+            errors = data.get("errors") or data
+            await ctx.send(f"❌ Couldn’t create tournament: `{errors}` <:beebo_:1383281762385531081>")
+            return
+
+        # Auto-create entry in MAP_FILE
+        tourney_map = load_json(MAP_FILE)
+        tourney_map.setdefault(slug, {})
+        created_participants = []
+
+        # Preload from role
+        if role:
+            for member in role.members:
+                pname = member.display_name
+                p_payload = {
+                    "participant": {
+                        "name": pname
+                    }
+                }
+                pdata, pstatus = await self.request("POST", f"tournaments/{slug}/participants", json=p_payload)
+                if pstatus == 200:
+                    pid = pdata["participant"]["id"]
+                    tourney_map[slug][str(member.id)] = str(pid)
+                    created_participants.append(pname)
+            save_json(MAP_FILE, tourney_map)
+
+        embed = discord.Embed(
+            title="<:beebo:1383282292478312519> Tournament Created!",
+            description=f"[{name}](https://challonge.com/{slug}) is live and ready.",
+            color=0x00ff99
+        )
+        embed.add_field(name="Slug", value=f"`{slug}`", inline=True)
+        embed.add_field(name="Type", value=f"`{selected_type}`", inline=True)
+
+        if created_participants:
+            embed.add_field(
+                name=f"👥 Preloaded {len(created_participants)} Participant(s)",
+                value=", ".join(created_participants[:10]) + ("..." if len(created_participants) > 10 else ""),
+                inline=False
+            )
+
+        embed.set_footer(text=f"Created by {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
+
 
 
     @commands.command(aliases=["fp"])
@@ -491,6 +555,30 @@ class ChallongeCog(commands.Cog):
         result_lines = [f"• `{name}` → `{pid}`" for name, pid in matches[:10]]
         msg = "\n".join(result_lines)
         await ctx.send(f"<:beebo:1383282292478312519> **Matches found in `{slug}`:**\n{msg}")
+
+    @commands.command(aliases=["bracket", "view_bracket"])
+    async def bracket_link(self, ctx, slug: str):
+        await ctx.send(f"🔗 View the bracket: https://challonge.com/{slug}")
+
+    @commands.command(aliases=["tinfo", "view_slug"])
+    async def tourney_info(self, ctx, slug: str):
+        data, status = await self.request("GET", f"tournaments/{slug}")
+        if status != 200:
+            await ctx.send(f"❌ Failed to fetch tournament: `{data.get('errors') or data}`")
+            return
+
+        t = data["tournament"]
+        embed = discord.Embed(
+            title=f"📘 {t['name']}",
+            description=f"[View on Challonge](https://challonge.com/{slug})",
+            color=0x7289da
+        )
+        embed.add_field(name="Type", value=t['tournament_type'].title(), inline=True)
+        embed.add_field(name="State", value=t['state'].capitalize(), inline=True)
+        embed.add_field(name="Participants", value=str(t['participants_count']), inline=True)
+        embed.set_footer(text=f"Created by {t['creator_name']}" if t.get("creator_name") else "Challonge")
+
+        await ctx.send(embed=embed)
 
 
     @commands.command(aliases=["pb", "purge"])
@@ -542,7 +630,8 @@ class ChallongeCog(commands.Cog):
                 "`!match_history <slug> [@user]` – Match history\n"
                 "`!leaderboard <slug>` – Show wins leaderboard\n"
                 "`!status <slug>` – Tournament status\n"
-                "`!tinfo <slug>` – Overview embed\n"
+                "`!tinfo <slug>` – View tournament overview\n"
+                "`!bracket <slug>` – Get bracket link\n"
                 "`!tourneys` – Your created tournaments\n"
                 "`!slugs` – List tracked tournament slugs"
             ),
@@ -552,6 +641,7 @@ class ChallongeCog(commands.Cog):
         embed.add_field(
             name="🛠️ Organizer Commands",
             value=(
+                "`!ct <slug> [type] [name] [@role]` – Create a tournament\n"
                 "`!seed <slug>` – Reseed / process check-ins\n"
                 "`!sync_matches <slug>` – Manually trigger match alerts"
             ),
@@ -559,19 +649,20 @@ class ChallongeCog(commands.Cog):
         )
 
         embed.add_field(
-        name="<:beebo:1383282292478312519>👑 Dev-Only Commands",
-        value=(
-            "`!bind <slug> <participant_id>`\n"
-            "`!drop <slug> <@user>` – Remove player from tourney`\n"
-            "`!dump_participants <slug>`\n"
-            "`!confirm_report <slug> <match_id>`\n"
-            "`!deny_report <slug> <match_id>`"
-        ),
-        inline=False
-    )
+            name="<:beebo:1383282292478312519>👑 Dev-Only Commands",
+            value=(
+                "`!bind <slug> <participant_id>`\n"
+                "`!drop <slug> <@user>` – Remove player from tourney\n"
+                "`!dump_participants <slug>`\n"
+                "`!confirm_report <slug> <match_id>`\n"
+                "`!deny_report <slug> <match_id>`"
+            ),
+            inline=False
+        )
 
         embed.set_footer(text="Use the <slug> from Challonge URL (e.g. 'mycooltourney')")
         await ctx.send(embed=embed)
+
 
     async def fetch_participants(self, slug):
         """Fetch participants from Challonge and return name → ID mapping."""
