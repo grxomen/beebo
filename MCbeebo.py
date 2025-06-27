@@ -82,7 +82,7 @@ async def check_server_status():
     server = JavaServer.lookup(SERVER_ADDRESS)
 
     try:
-        status = server.status()
+        status = server.status(retries=1)
         if last_status == "offline":
             embed = discord.Embed(title="**Minecraft Server is ONLINE!**", color=0xb0c0ff)
             embed.add_field(name="Java IP", value="termite.exaroton.me", inline=False)
@@ -138,7 +138,8 @@ async def server_status(self, ctx):
         online_players = [p.name for p in status.players.sample] if status.players.sample else []
         players_str = ", ".join(online_players) if online_players else "Nobody online"
         player_count_str = f"{status.players.online}/{status.players.max}"
-    except Exception:
+    except Exception as e:
+        print(f"[JavaServer Error] {e}")
         players_str = "Unavailable"
         player_count_str = "?"
 
@@ -149,10 +150,11 @@ async def server_status(self, ctx):
     )
     embed.add_field(name="Status", value=f"🟢 {status_text}", inline=True)
     embed.add_field(name="Uptime", value=uptime_str, inline=True)
-    embed.add_field(name="Players Online", value=f"{player_count_str}", inline=False)
+    embed.add_field(name="Players Online", value=player_count_str, inline=False)
     embed.add_field(name="Who's Online", value=players_str, inline=False)
-    await ctx.send(embed=embed)Online", value=", ".join(players) if players else "Nobody online", inline=False)
+
     await ctx.send(embed=embed)
+
 
 
 @bot.command()
