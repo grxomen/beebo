@@ -355,7 +355,7 @@ class ExarotonCog(commands.Cog):
 
         # ─── Embed Response ───
         embed = discord.Embed(
-            title="🪳 Termite Server Status",
+            title="Termite Server Status",
             description=f"**MOTD:** {motd}",
             color=discord.Color.green() if online else discord.Color.red()
         )
