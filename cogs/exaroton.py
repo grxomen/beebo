@@ -2,6 +2,9 @@ import discord
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from discord.ext.commands import cooldown, BucketType, Context
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 import json
 import time
 import requests
@@ -400,7 +403,89 @@ class ExarotonCog(commands.Cog):
             await ctx.send(f"🕒 Slow down! Try again in `{int(retry_after)}s`.")
             return True
         return False
+
+   @commands.command(name="players", aliases=["who", "online"])
+    async def show_scraped_players(self, ctx):
+        await ctx.typing()
+        from exaroton_scraper import get_live_status
+        data = get_live_status()
     
+        if "error" in data:
+            await ctx.send(f"❌ Couldn’t fetch live data: `{data['error']}`")
+            return
+    
+        players = data.get("players", [])
+        if not players:
+            await ctx.send("👻 Nobody is online right now.")
+        else:
+            player_str = ", ".join(players)
+            await ctx.send(f"👥 Currently online: **{player_str}**")
+ 
+   @commands.command(name="termite", aliases=["statuslive", "statusreal"])
+    async def mcserver_status(self, ctx):
+        if await self.handle_cooldown(ctx):
+            return
+    
+        await ctx.typing()
+    
+        headers = {"Authorization": f"Bearer {EXAROTON_TOKEN}"}
+        url = f"https://api.exaroton.com/v1/servers/{EXAROTON_SERVER_ID}"
+    
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            api_data = response.json() if response.status_code == 200 else {}
+        except:
+            api_data = {}
+    
+        motd = api_data.get("motd", {}).get("clean", [""])[0] if api_data else None
+        players = api_data.get("players", {}).get("list", []) if api_data else []
+        online = api_data.get("host", {}).get("online", False) if api_data else False
+        status = "Online" if online else "Offline"
+    
+        # If API fails or says offline, try the scraper
+        if not online or not players:
+            from exaroton_scraper import get_live_status
+            scraped = get_live_status()
+    
+            if "error" not in scraped:
+                motd = scraped.get("motd", motd or "Unknown MOTD")
+                status = scraped.get("status", status)
+                players = scraped.get("players", players)
+                online = "online" in status.lower()
+    
+        embed = discord.Embed(
+            title="🖥️ Termite Server Status (Live)",
+            description=f"**MOTD:** `{motd}`",
+            color=discord.Color.green() if online else discord.Color.red()
+        )
+        embed.add_field(name="Status", value=f"🟢 {status}" if online else f"🔴 {status}", inline=True)
+        embed.add_field(
+            name="Players Online",
+            value=", ".join(players) if players else "Nobody online.",
+            inline=False
+        )
+        embed.set_footer(text="Live data from Exaroton")
+    
+        await ctx.send(embed=embed)
+    
+        # Donation panel logic (same as !status)
+        user_id = ctx.author.id
+        code = self.credit_pool_code or load_data(POOL_FILE).get("pool")
+    
+        if user_id in [546650815297880066, 858462569043722271] or donor_role_id in [role.id for role in ctx.author.roles]:
+            embed = discord.Embed(
+                title="💳 Top Up Server Credits",
+                description="Help keep the server running! Use the button below to donate credits.",
+                color=0x462f80
+            )
+            view = ServerControlView(code)
+            suffix = "Dev bypass (cake)" if user_id == 546650815297880066 else "Dev bypass (Toast)" if user_id == 858462569043722271 else "Donor Access"
+            embed.set_footer(text=suffix)
+            await ctx.send(embed=embed, view=view)
+        else:
+            await ctx.send("🚫 You don't have permission to access the donation panel.")
+
+
     @commands.command(name="status", aliases=["serverstatus"])
     async def server_status(self, ctx):
         if await self.handle_cooldown(ctx):
