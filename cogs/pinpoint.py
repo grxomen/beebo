@@ -34,13 +34,18 @@ class PinPoint(commands.Cog):
     @commands.command(name="mark")
     async def mark(self, ctx, x: int, y_or_desc: str, z: int, *, description: str = None):
         """Mark a location with optional Y coordinate. Usage: !mark x y z desc OR !mark x desc z"""
+    
+        required_role_id = 1366796508288127066
+        if required_role_id not in [role.id for role in ctx.author.roles]:
+            return  # silent fail, no message, no log
+    
         try:
             y = int(y_or_desc)
             desc = description
         except ValueError:
             y = None
             desc = f"{y_or_desc} {description}" if description else y_or_desc
-
+    
         pins = load_pins()
         pin_id = str(max([int(k) for k in pins.keys()] + [0]) + 1)
         timestamp = datetime.utcnow().isoformat()
@@ -58,11 +63,13 @@ class PinPoint(commands.Cog):
         }
     
         save_pins(pins)
+    
         embed = discord.Embed(title=f"📍 {desc}", color=0x462f80)
         coord_field = f"x: {x}, z: {z}" if y is None else f"x: {x}, y: {y}, z: {z}"
         embed.add_field(name="🧭 Coordinates", value=coord_field, inline=False)
         embed.set_footer(text=f"Submitted by {ctx.author.display_name} • ID: {pin_id}")
         await ctx.send(embed=embed)
+
 
 
     @commands.command(name="pins")
