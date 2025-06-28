@@ -404,7 +404,7 @@ class ExarotonCog(commands.Cog):
             return True
         return False
 
-   @commands.command(name="players", aliases=["who", "online"])
+    @commands.command(name="players", aliases=["who", "online"])
     async def show_scraped_players(self, ctx):
         await ctx.typing()
         from exaroton_scraper import get_live_status
@@ -421,7 +421,7 @@ class ExarotonCog(commands.Cog):
             player_str = ", ".join(players)
             await ctx.send(f"👥 Currently online: **{player_str}**")
  
-   @commands.command(name="termite", aliases=["statuslive", "statusreal"])
+    @commands.command(name="termite", aliases=["statuslive", "statusreal"])
     async def mcserver_status(self, ctx):
         if await self.handle_cooldown(ctx):
             return
