@@ -2,9 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from mcstatus import JavaServer
 from discord.ext.commands import cooldown, BucketType, Context
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
+from exaroton_scraper_playwright import get_live_status_playwright
 import json
 import time
 import requests
@@ -407,8 +405,8 @@ class ExarotonCog(commands.Cog):
     @commands.command(name="players", aliases=["who", "online"])
     async def show_scraped_players(self, ctx):
         await ctx.typing()
-        from exaroton_scraper import get_live_status
-        data = get_live_status()
+        
+        data = await get_live_status_playwright()
     
         if "error" in data:
             await ctx.send(f"❌ Couldn’t fetch live data: `{data['error']}`")
@@ -444,8 +442,8 @@ class ExarotonCog(commands.Cog):
     
         # If API fails or says offline, try the scraper
         if not online or not players:
-            from exaroton_scraper import get_live_status
-            scraped = get_live_status()
+            
+            scraped = await get_live_status_playwright()
     
             if "error" not in scraped:
                 motd = scraped.get("motd", motd or "Unknown MOTD")
@@ -472,7 +470,12 @@ class ExarotonCog(commands.Cog):
         user_id = ctx.author.id
         code = self.credit_pool_code or load_data(POOL_FILE).get("pool")
     
-        if user_id in [546650815297880066, 858462569043722271] or donor_role_id in [role.id for role in ctx.author.roles]:
+        donor_role_id = 1386101967297843270
+
+        has_donor_role = any(role.id == donor_role_id for role in ctx.author.roles)
+        is_dev = user_id in [448896936481652777, 546650815297880066, 858462569043722271]
+
+        if is_dev or has_donor_role:
             embed = discord.Embed(
                 title="💳 Top Up Server Credits",
                 description="Help keep the server running! Use the button below to donate credits.",
