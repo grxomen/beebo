@@ -82,21 +82,6 @@ class AdminCog(commands.Cog):
         hours_left = credit_balance / burn_rate
         await ctx.send(f"🔥 With **{credit_balance:.2f}** credits and a burn rate of **{burn_rate:.2f}/hr**, the server can run for approximately **{hours_left:.1f} hours**.")
 
-    @commands.command(name="players", aliases=["whoup"])
-    async def players(self, ctx):
-        if await self.handle_cooldown(ctx):
-            return
-
-        data = get_server_data()
-        if not data:
-            await ctx.send("<:beebo:1383282292478312519> Couldn't fetch player list.")
-            return
-
-        players = data.get("players", {}).get("list", [])
-        if players:
-            await ctx.send(f"<:beebo:1383282292478312519> Online Players: {', '.join(players)}")
-        else:
-            await ctx.send("<:beebo:1383282292478312519> No players are currently online.")
 
     @commands.command(name="sessionlength", aliases=["session"])
     async def session_length(self, ctx):
