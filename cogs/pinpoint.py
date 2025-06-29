@@ -7,6 +7,7 @@ import json
 import os
 import csv
 from datetime import datetime
+from discord.ext.commands import cooldown, BucketType
 
 PIN_DATA_FILE = "data/pins.json"
 SUBMITTER_MAP = {
