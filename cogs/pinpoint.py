@@ -32,10 +32,12 @@ class PinPoint(commands.Cog):
         self.bot = bot
 
     @commands.command(name="mark")
+    @cooldown(2, 60, BucketType.channel)
     async def mark(self, ctx, x: int, y_or_desc: str, z: int, *, description: str = None):
         """Mark a location with optional Y coordinate. Usage: !mark x y z desc OR !mark x desc z"""
     
         required_role_id = 1366796508288127066
+        dev_ids = [448896936481652777, 546650815297880066, 858462569043722271, 1144395381787070576, 923014434228690966]
         if required_role_id not in [role.id for role in ctx.author.roles]:
             return  # silent fail, no message, no log
     
