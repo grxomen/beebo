@@ -389,6 +389,7 @@ class ExarotonCog(commands.Cog):
 
 
     @commands.command(name="status", aliases=["serverstatus", "termstatus"])
+    @commands.cooldown(2, 120, BucketType.guild)
     async def status(self, ctx):
         if await self.handle_cooldown(ctx):
             return
