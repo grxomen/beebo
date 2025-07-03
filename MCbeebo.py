@@ -75,7 +75,7 @@ async def on_ready():
         await channel.send(embed=embed)
     check_server_status.start()
 
-@tasks.loop(hours=3)
+@tasks.loop(hours=8)
 async def check_server_status():
     global last_status
     channel = bot.get_channel(CHANNEL_ID)
