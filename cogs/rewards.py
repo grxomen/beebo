@@ -130,6 +130,34 @@ class RewardsCog(commands.Cog):
         await self.check_playtime()
         await ctx.send("✅ Playtime updated manually.")
 
+    @commands.command(name="forcecheckdry", aliases=["drycheck", "dryrun, "fdd"])
+    async def forcecheckdry(self, ctx):
+        """Dry run playtime update — logs what would be added, without saving."""
+        online_players = get_online_players()
+        now = datetime.utcnow()
+    
+        data = load_json(PLAYTIME_FILE)
+        summary = []
+    
+        for player in online_players:
+            if player not in data:
+                summary.append(f"🆕 `{player}` would be **added** with 0 minutes.")
+            else:
+                last_seen = datetime.fromisoformat(data[player]["last_seen"])
+                elapsed = int((now - last_seen).total_seconds() / 60)
+                if elapsed > 0:
+                    summary.append(f"⏱️ `{player}` would gain **{elapsed} minutes** (last seen {elapsed} min ago).")
+                else:
+                    summary.append(f"🕒 `{player}` has no time to add (already updated).")
+    
+        embed = discord.Embed(
+            title="🧪 Dry Run — Playtime Update Preview",
+            description="\n".join(summary),
+            color=discord.Color.teal()
+        )
+        embed.set_footer(text="No data was changed.")
+        await ctx.send(embed=embed)
+
     @commands.command(name="playtime", aliases=["mctime", "timeplayed"])
     async def playtime(self, ctx, player_name: str = None):
         data = load_json(PLAYTIME_FILE)
