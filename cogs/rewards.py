@@ -130,33 +130,60 @@ class RewardsCog(commands.Cog):
         await self.check_playtime()
         await ctx.send("✅ Playtime updated manually.")
 
-    @commands.command(name="forcecheckdry", aliases=["drycheck", "dryrun, "fdd"])
+    @commands.command(name="forcecheckdry", aliases=["drycheck", "dryrun"])
     async def forcecheckdry(self, ctx):
-        """Dry run playtime update — logs what would be added, without saving."""
+        """Dry run playtime update — shows projected gains and new totals, sorted by time added."""
         online_players = get_online_players()
         now = datetime.utcnow()
     
         data = load_json(PLAYTIME_FILE)
-        summary = []
+        results = []
     
         for player in online_players:
             if player not in data:
-                summary.append(f"🆕 `{player}` would be **added** with 0 minutes.")
+                results.append({
+                    "name": player,
+                    "gain": 0,
+                    "new_total": 0,
+                    "note": "🆕 Would be added fresh."
+                })
             else:
                 last_seen = datetime.fromisoformat(data[player]["last_seen"])
                 elapsed = int((now - last_seen).total_seconds() / 60)
                 if elapsed > 0:
-                    summary.append(f"⏱️ `{player}` would gain **{elapsed} minutes** (last seen {elapsed} min ago).")
+                    new_total = data[player]["total_minutes"] + elapsed
+                    results.append({
+                        "name": player,
+                        "gain": elapsed,
+                        "new_total": new_total,
+                        "note": f"⏱️ Would gain **{elapsed} min**, total: **{new_total} min**"
+                    })
                 else:
-                    summary.append(f"🕒 `{player}` has no time to add (already updated).")
+                    results.append({
+                        "name": player,
+                        "gain": 0,
+                        "new_total": data[player]["total_minutes"],
+                        "note": "🕒 Already up to date."
+                    })
+    
+        # Sort by most time gained
+        results.sort(key=lambda x: x["gain"], reverse=True)
     
         embed = discord.Embed(
             title="🧪 Dry Run — Playtime Update Preview",
-            description="\n".join(summary),
-            color=discord.Color.teal()
+            color=discord.Color.purple()
         )
-        embed.set_footer(text="No data was changed.")
+    
+        for r in results:
+            embed.add_field(
+                name=f"🧍 {r['name']}",
+                value=f"{r['note']}",
+                inline=False
+            )
+    
+        embed.set_footer(text="This is a preview. No data was saved.")
         await ctx.send(embed=embed)
+
 
     @commands.command(name="playtime", aliases=["mctime", "timeplayed"])
     async def playtime(self, ctx, player_name: str = None):
