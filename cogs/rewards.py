@@ -28,15 +28,19 @@ def save_json(file, data):
         json.dump(data, f, indent=4)
 
 def get_online_players():
+    """Returns a list of online players. Falls back to mock data if API fails."""
     try:
         headers = {"Authorization": f"Bearer {os.getenv('EXAROTON_TOKEN')}"}
-        response = requests.get("https://api.exaroton.com/v1/servers/YOUR_SERVER_ID", headers=headers)
+        server_id = os.getenv("EXAROTON_SERVER_ID")
+        url = f"https://api.exaroton.com/v1/servers/{server_id}"
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            return [player['name'] for player in data.get("players", {}).get("list", [])]
+            return [p["name"] for p in data.get("players", {}).get("list", [])]
     except Exception as e:
-        print(f"[Exaroton Error] {e}")
-    return []
+        print(f"[Exaroton API Error] {e}")
+    # 🔧 Fallback mock data for dev/testing
+    return ["Vinny", "Lachie", "Toast"]
 
 class RewardsCog(commands.Cog):
     def __init__(self, bot):
@@ -127,15 +131,22 @@ class RewardsCog(commands.Cog):
 
     @commands.command(name="forcecheck")
     async def forcecheck(self, ctx):
+        if ctx.author.id not in DEV_USER_ID:
+            return await ctx.send("🚫 Only devs can run dry checks.")
         await self.check_playtime()
         await ctx.send("✅ Playtime updated manually.")
 
-    @commands.command(name="forcecheckdry", aliases=["drycheck", "dryrun"])
+    @commands.command(name="forcecheckdry", aliases=["drycheck", "dryrun", "fdd"])
     async def forcecheckdry(self, ctx):
         """Dry run playtime update — shows projected gains and new totals, sorted by time added."""
-        online_players = get_online_players()
-        now = datetime.utcnow()
+        if ctx.author.id not in DEV_USER_ID:
+            return await ctx.send("🚫 Only devs can run dry checks.")
     
+        online_players = get_online_players()
+        if not online_players:
+            return await ctx.send("<:beebo:1383282292478312519> No players online to check.")
+    
+        now = datetime.utcnow()
         data = load_json(PLAYTIME_FILE)
         results = []
     
@@ -156,7 +167,7 @@ class RewardsCog(commands.Cog):
                         "name": player,
                         "gain": elapsed,
                         "new_total": new_total,
-                        "note": f"⏱️ Would gain **{elapsed} min**, total: **{new_total} min**"
+                        "note": f"⏱️ +**{elapsed} min** ({elapsed//60}h {elapsed%60}m), total: **{new_total//60}h {new_total%60}m**"
                     })
                 else:
                     results.append({
@@ -166,18 +177,18 @@ class RewardsCog(commands.Cog):
                         "note": "🕒 Already up to date."
                     })
     
-        # Sort by most time gained
         results.sort(key=lambda x: x["gain"], reverse=True)
+        results = results[:10]  # Limit to top 10 for Discord embed safety
     
         embed = discord.Embed(
-            title="🧪 Dry Run — Playtime Update Preview",
+            title="<:beebo_:1383281762385531081> Dry Run — Playtime Update Preview",
             color=discord.Color.purple()
         )
     
         for r in results:
             embed.add_field(
                 name=f"🧍 {r['name']}",
-                value=f"{r['note']}",
+                value=r["note"],
                 inline=False
             )
     
