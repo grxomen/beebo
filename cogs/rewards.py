@@ -27,6 +27,17 @@ def save_json(file, data):
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
 
+def get_online_players():
+    try:
+        headers = {"Authorization": f"Bearer {os.getenv('EXAROTON_TOKEN')}"}
+        response = requests.get("https://api.exaroton.com/v1/servers/YOUR_SERVER_ID", headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            return [player['name'] for player in data.get("players", {}).get("list", [])]
+    except Exception as e:
+        print(f"[Exaroton Error] {e}")
+    return []
+
 class RewardsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -96,7 +107,7 @@ class RewardsCog(commands.Cog):
     # -- Simulated Playtime Tracker --
     @tasks.loop(minutes=5)
     async def check_playtime(self):
-        online_players = ["Vinny", "Lachie", "Toast"]  # Replace with real data pull when Exaroton key is in
+        online_players = get_online_players()
         now = datetime.utcnow()
 
         data = load_json(PLAYTIME_FILE)
@@ -113,6 +124,11 @@ class RewardsCog(commands.Cog):
                 data[player]["last_seen"] = now.isoformat()
 
         save_json(PLAYTIME_FILE, data)
+
+    @commands.command(name="forcecheck")
+    async def forcecheck(self, ctx):
+        await self.check_playtime()
+        await ctx.send("✅ Playtime updated manually.")
 
     @commands.command(name="playtime", aliases=["mctime", "timeplayed"])
     async def playtime(self, ctx, player_name: str = None):
